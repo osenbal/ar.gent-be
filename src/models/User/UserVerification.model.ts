@@ -1,13 +1,16 @@
 import { model, Schema } from 'mongoose';
 import { UserVerification } from '@interfaces/user.interface';
 
-const UserVerificationSchema: Schema = new Schema({
+const UserVerificationSchema = new Schema<UserVerification>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
   },
   uniqueString: String,
-  createdAt: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
   expiresAt: Date,
 });
 

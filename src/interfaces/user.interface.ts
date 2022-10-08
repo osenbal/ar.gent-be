@@ -60,3 +60,11 @@ export interface ISkill_User {
   userId: Types.ObjectId;
   skillId: Types.ObjectId;
 }
+
+export interface IResetPassword {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  uniqueString: string;
+  createdAt: Date;
+  expiresAt: Date;
+}

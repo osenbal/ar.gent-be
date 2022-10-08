@@ -1,6 +1,7 @@
 import UserModel from '@/models/User/User.model';
 import UserVerificationModel from '@/models/User/UserVerification.model';
 import bcrypt from 'bcrypt';
+import UserResetPasswordModel from '@models/User/UserResetPassword.model';
 import { NextFunction, Request, Response } from 'express';
 import { HttpException } from '@exceptions/HttpException';
 import { isEmpty } from '@utils/util';
@@ -207,7 +208,7 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await user
-      .find({ roles: ['user'] })
+      .find({ role: ['user'] })
       .select('-password')
       .lean();
 
@@ -248,16 +249,9 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
 const userEdit = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const {
-      firstName,
-      lastName,
-      gender,
-      description,
-      phoneNumber,
-      active,
-      email,
-      password,
-    } = req.body;
+    const { firstName, lastName, gender, phoneNumber, email, password } =
+      req.body;
+    console.log('req : ', req.body);
 
     if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
 
@@ -477,6 +471,120 @@ const sendVerification = async (
   }
 };
 
+// @desc Reset password
+// @route POST /auth/user/send/reset-password
+// @access Public
+const requestResetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json(new HttpException(400, 'Bad Request'));
+    }
+
+    const userFound = await user.findOne({ email }).exec();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, 'User not found'));
+    }
+
+    if (!userFound.verified) {
+      return res.status(409).json(new HttpException(409, 'User not verified'));
+    }
+
+    const findUserResetPassword = await UserResetPasswordModel.findOne({
+      userId: userFound._id,
+    });
+
+    if (
+      findUserResetPassword ||
+      findUserResetPassword?.expiresAt > new Date()
+    ) {
+      findUserResetPassword.remove();
+    }
+
+    // send email reset password
+    return mailService.sendEmailResetPassword(
+      { _id: userFound._id, email },
+      res
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Reset password
+// @route POST /auth/user/reset/password/:userId/:uniqueString
+// @access Private
+const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId, uniqueString } = req.params;
+    const { password } = req.body;
+
+    if (!userId || !uniqueString || !password) {
+      return res.status(400).json(new HttpException(400, 'Bad Request'));
+    }
+
+    const userFound = await user.findById(userId).exec();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, 'User not found'));
+    }
+
+    if (!userFound.verified) {
+      return res.status(409).json(new HttpException(409, 'User not verified'));
+    }
+
+    const findUserResetPassword = await UserResetPasswordModel.findOne({
+      userId: userFound._id,
+    });
+
+    if (!findUserResetPassword) {
+      return res
+        .status(404)
+        .json(new HttpException(404, 'Invalid Link or Expired'));
+    }
+
+    const hashedUniqueString = findUserResetPassword.uniqueString;
+    const compareUniqueString: boolean = await bcrypt.compare(
+      uniqueString,
+      hashedUniqueString
+    );
+
+    if (!compareUniqueString) {
+      return res
+        .status(404)
+        .json(new HttpException(404, 'Invalid Link or Expired'));
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    user
+      .updateOne({ _id: userId }, { password: hashedPassword })
+      .then(() => {
+        findUserResetPassword.remove();
+        return res
+          .status(200)
+          .json(new HttpException(200, 'Password success updated'));
+      })
+      .catch(() => {
+        return res
+          .status(500)
+          .json(new HttpException(500, 'Internal Server Error'));
+      });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   signUp,
   getAllUser,
@@ -487,4 +595,6 @@ export {
   verifyUser,
   verifiedUser,
   sendVerification,
+  requestResetPassword,
+  resetPassword,
 };

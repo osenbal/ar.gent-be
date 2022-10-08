@@ -60,7 +60,7 @@ class App {
     // this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cors(corsOptions));
     this.app.use(express.static(path.join(__dirname, 'public')));
-    this.app.use('/public/uploads', express.static('public/uploads'));
+    this.app.use('/public', express.static('public'));
   }
 
   private initialViewEngginge() {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import AuthService from '@services/auth.service';
 import { HttpException } from '@exceptions/HttpException';
-import { RequestWithUser } from '@interfaces/auth.interface';
+import { IRequestWithUser } from '@interfaces/auth.interface';
 
 //  @desc initialized object AuthService
 const authService = new AuthService();
@@ -60,7 +60,7 @@ const refresh = async (req: Request, res: Response, next: NextFunction) => {
 // @route POST /auth/logout
 // @access Private - just to clear cookie if exist
 const logout = async (
-  req: RequestWithUser,
+  req: IRequestWithUser,
   res: Response,
   next: NextFunction
 ) => {

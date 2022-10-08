@@ -12,7 +12,7 @@ class AuthService {
 
   public async login(
     userData
-  ): Promise<{ refreshITokenData: ITokenData; accessToken: ITokenData }> {
+  ): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
     if (isEmpty(userData)) throw new HttpException(400, 'Unauthorized');
 
     const foundUser: IUser = await this.user
@@ -32,14 +32,14 @@ class AuthService {
       throw new HttpException(409, 'Password is not matching');
 
     const accessToken = this.createToken(foundUser);
-    const refreshITokenData = this.createRefreshToken(foundUser);
+    const refreshTokenData = this.createRefreshToken(foundUser);
 
-    return { refreshITokenData, accessToken };
+    return { refreshTokenData, accessToken };
   }
 
   public async refresh(
     refreshToken: string
-  ): Promise<{ refreshITokenData: ITokenData; accessToken: ITokenData }> {
+  ): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
     if (!refreshToken) throw new HttpException(400, 'Unauthorized');
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
@@ -49,9 +49,9 @@ class AuthService {
     if (!user) throw new HttpException(409, 'User not found');
 
     const accessToken: ITokenData = this.createToken(user);
-    const refreshITokenData: ITokenData = this.createRefreshToken(user);
+    const refreshTokenData: ITokenData = this.createRefreshToken(user);
 
-    return { refreshITokenData, accessToken };
+    return { refreshTokenData, accessToken };
   }
 
   public async logout(userData: IUser): Promise<IUser> {

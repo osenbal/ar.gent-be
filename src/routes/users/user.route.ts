@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { Routes } from '@interfaces/routes.interface';
 import limiterMiddleware from '@middlewares/limiter.midleware';
-
+import authMiddleware from '@middlewares/auth.middleware';
+import uploadStorage, { filterImage } from '@middlewares/storage.middleware';
 import {
   signUp,
   getAllUser,
@@ -12,14 +13,14 @@ import {
   verifyUser,
   verifiedUser,
   sendVerification,
+  requestResetPassword,
+  resetPassword,
 } from '@controllers/user.controller';
 import {
   authPolicyMiddleware,
   authRoleAndPolicyMiddleware,
   authRoleMiddleware,
 } from '@middlewares/authRole.middleware';
-import authMiddleware from '@middlewares/auth.middleware';
-import uploadStorage, { filterImage } from '@middlewares/storage.middleware';
 
 class UserRoute implements Routes {
   public path = '/auth/user/';
@@ -67,9 +68,13 @@ class UserRoute implements Routes {
       .route(`${this.path}delete/:id`)
       .delete(authMiddleware, authRoleAndPolicyMiddleware('admin'), userDelete);
 
-    this.router.route(`${this.path}reset/:id`).delete((req, res) => {
-      res.send('reset');
-    });
+    this.router
+      .route(`${this.path}send/reset-password`)
+      .post(requestResetPassword);
+
+    this.router
+      .route(`${this.path}reset/password/:userId/:uniqueString`)
+      .post(resetPassword);
   }
 }
 

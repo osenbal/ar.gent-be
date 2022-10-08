@@ -5,6 +5,7 @@ import { ROLE_USER } from '@config/constant/constant';
 const UserSchema = new Schema<IUser>({
   banner: {
     type: String,
+    default: 'public/defaults/profile/bannerProfile.png',
   },
   photo: {
     type: String,
@@ -33,6 +34,7 @@ const UserSchema = new Schema<IUser>({
   },
   about: {
     type: String,
+    default: 'Hi there! I am using ar.gent.',
   },
   birthday: {
     type: Date,
@@ -40,6 +42,7 @@ const UserSchema = new Schema<IUser>({
   },
   address: {
     type: Object as () => IAddress,
+    required: true,
   },
   gender: {
     type: String,
@@ -52,9 +55,11 @@ const UserSchema = new Schema<IUser>({
   },
   cv: {
     type: String,
+    default: '',
   },
   portfolio_url: {
     type: [String],
+    default: [],
   },
   verified: {
     type: Boolean,
