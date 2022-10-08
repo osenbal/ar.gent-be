@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Routes } from '@interfaces/routes.interface';
-import { createJob } from '@controllers/job.controller';
+import { createJob, getAllJob } from '@controllers/job.controller';
+import uploadStorage, { filterImage } from '@middlewares/storage.middleware';
 
 class JobRoute implements Routes {
   public path = '/job/';
@@ -11,11 +12,11 @@ class JobRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router.route(`${this.path}all`).get((req, res) => {
-      res.send('all jobs');
-    });
+    this.router.route(`${this.path}all`).get(getAllJob);
 
-    this.router.route(`${this.path}create`).post(createJob);
+    this.router
+      .route(`${this.path}create`)
+      .post(uploadStorage('job', 'image', filterImage), createJob);
   }
 }
 

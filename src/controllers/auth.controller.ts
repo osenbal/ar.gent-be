@@ -39,7 +39,9 @@ const refresh = async (req: Request, res: Response, next: NextFunction) => {
 
     const refreshToken = cookies.Authorization;
 
-    const { refreshTokenData, accessToken } = await authService.refresh(refreshToken);
+    const { refreshTokenData, accessToken } = await authService.refresh(
+      refreshToken
+    );
 
     res.cookie('Authorization', refreshTokenData.token, {
       httpOnly: true,
@@ -57,12 +59,21 @@ const refresh = async (req: Request, res: Response, next: NextFunction) => {
 // @desc logout
 // @route POST /auth/logout
 // @access Private - just to clear cookie if exist
-const logout = async (req: RequestWithUser, res: Response, next: NextFunction) => {
+const logout = async (
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const cookies = req.cookies;
-    if (!cookies?.Authorization) return res.status(204).json({ code: 204, message: 'No Content' });
+    if (!cookies?.Authorization)
+      return res.status(204).json({ code: 204, message: 'No Content' });
 
-    res.clearCookie('Authorization', { httpOnly: true, secure: true, sameSite: 'none' });
+    res.clearCookie('Authorization', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
 
     res.status(200).json({ code: 200, message: 'Cookie Cleared' });
   } catch (error) {

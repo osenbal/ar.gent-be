@@ -5,9 +5,9 @@ import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import morgan from 'morgan';
 import errorMiddleware from '@middlewares/error.middleware';
-import { upload } from '@middlewares/storage.middleware';
 import corsOptions from '@config/cors.config';
 import cookieParser from 'cookie-parser';
+import bodyParser from 'body-parser';
 import { connect, ConnectOptions, set } from 'mongoose';
 import { Routes } from '@interfaces/routes.interface';
 import { dbConnection } from '@/databases';
@@ -25,6 +25,7 @@ class App {
     this.port = process.env.APP_PORT || 8760;
 
     this.connectToDatabase();
+    this.initialViewEngginge();
     this.initialMiddlewares();
     this.initializeRoutes(routes);
     this.initializeSwagger();
@@ -53,11 +54,18 @@ class App {
   private initialMiddlewares() {
     this.app.use(morgan(LOG_FORMAT, { stream }));
     this.app.use(cookieParser());
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(bodyParser.urlencoded({ extended: true }));
+    this.app.use(bodyParser.json());
+    // this.app.use(express.json());
+    // this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cors(corsOptions));
     this.app.use(express.static(path.join(__dirname, 'public')));
-    this.app.use(upload);
+    this.app.use('/public/uploads', express.static('public/uploads'));
+  }
+
+  private initialViewEngginge() {
+    this.app.set('view engine', 'ejs');
+    this.app.set('views', path.join(__dirname, 'views'));
   }
 
   /**
@@ -65,7 +73,7 @@ class App {
    *
    **/
   private initializeRoutes(routes: Routes[]) {
-    routes.forEach(route => {
+    routes.forEach((route) => {
       this.app.use('/', route.router);
     });
   }
@@ -100,7 +108,7 @@ class App {
       res.status(404);
 
       if (req.accepts('html')) {
-        res.sendFile(path.join(__dirname, 'views', '404.html'));
+        res.render('pages/404');
         return;
       } else if (req.accepts('json')) {
         res.json({ status: 404, error: 'Not found' });

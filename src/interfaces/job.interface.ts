@@ -1,12 +1,48 @@
-export default interface Job {
-  _id: string;
-  userId: string;
-  emailUser: string;
-  image: string;
+import { Types } from 'mongoose';
+
+export enum EJobType {
+  INTERNSHIP = 'internship',
+  FULL_TIME = 'full-time',
+  PART_TIME = 'part-time',
+  CONTRACT = 'contract',
+}
+
+export enum EJobLevel {
+  JUNIOR = 'junior',
+  MID = 'mid',
+  SENIOR = 'senior',
+}
+
+export enum EJobWorkPlace {
+  REMOTE = 'remote',
+  OFFICE = 'office',
+  HYBRID = 'hybrid',
+}
+
+export interface IJobCategory {
+  _id: Types.ObjectId;
+  jobId: Types.ObjectId;
+  categoryId: Types.ObjectId;
+}
+
+export interface ICategory {
+  _id: Types.ObjectId;
+  name: string;
+}
+
+export default interface IJob {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   title: string;
   description: string;
-  category: string[];
-  salary: string;
-  created_at: string;
-  deleted_at: string | null;
+  photo: string; // url link
+  type: EJobType;
+  level: EJobLevel;
+  workPlace: EJobWorkPlace;
+  location: string;
+  salary: number;
+  isTaken: boolean;
+  createdAt: Date;
+  updatedAt: Date | null;
+  deletedAt: Date | null;
 }

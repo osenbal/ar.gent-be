@@ -1,16 +1,16 @@
 import { Request } from 'express';
-import { User } from '@interfaces/user.interface';
+import IUser from '@interfaces/user.interface';
 
-export interface DataStoredInToken {
+export interface IDataStoredInToken {
   _id: string;
   role: string;
 }
 
-export interface TokenData {
+export interface ITokenData {
   token: string;
   expiresIn: number;
 }
 
-export interface RequestWithUser extends Request {
-  user: User;
+export interface IRequestWithUser extends Request {
+  user: IUser;
 }
