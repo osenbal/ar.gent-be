@@ -1,6 +1,6 @@
 import multer from 'multer';
 
-const uploadStorage = (folder: string, type: string, filter) => {
+const uploadStorage = (folder: string, filter) => {
   return multer({
     storage: multer.diskStorage({
       destination: (req, file, cb) => {
@@ -11,11 +11,9 @@ const uploadStorage = (folder: string, type: string, filter) => {
         cb(null, new Date().getTime() + '-' + file.originalname);
       },
     }),
-    limits: {
-      fileSize: 1024 * 1024 * 5,
-    },
+
     fileFilter: filter,
-  }).single(type);
+  });
 };
 
 const filterImage = (req, file, cb) => {
@@ -40,3 +38,17 @@ const filterPdf = (req, file, cb) => {
 
 export default uploadStorage;
 export { filterImage, filterPdf };
+
+// const uploadStorage = (folder: string) => {
+//   return multer.diskStorage({
+//     destination: (req, file, cb) => {
+//       const dir = `public/uploads/${folder}`;
+//       cb(null, dir);
+//     },
+//     filename: (req, file, cb) => {
+//       cb(null, new Date().getTime() + '-' + file.originalname);
+//     },
+//   });
+// };
+
+// export default uploadStorage;

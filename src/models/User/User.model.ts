@@ -1,4 +1,10 @@
-import IUser, { EGender, IAddress } from '@interfaces/user.interface';
+import IUser, {
+  EGender,
+  IAddress,
+  IExperience,
+  IEducation,
+  ICertificate,
+} from '@interfaces/user.interface';
 import { model, Schema } from 'mongoose';
 import { ROLE_USER } from '@config/constant/constant';
 
@@ -7,15 +13,15 @@ const UserSchema = new Schema<IUser>({
     type: String,
     default: 'public/defaults/profile/bannerProfile.png',
   },
-  photo: {
+  avatar: {
     type: String,
     required: true,
   },
-  firstName: {
+  username: {
     type: String,
     required: true,
   },
-  lastName: {
+  fullName: {
     type: String,
     required: true,
   },
@@ -56,6 +62,22 @@ const UserSchema = new Schema<IUser>({
   cv: {
     type: String,
     default: '',
+  },
+  skill: {
+    type: [String],
+    default: [],
+  },
+  education: {
+    type: [Object as () => IEducation],
+    default: [],
+  },
+  experience: {
+    type: [Object as () => IExperience],
+    default: [],
+  },
+  certificate: {
+    type: [Object as () => ICertificate],
+    default: [],
   },
   portfolio_url: {
     type: [String],

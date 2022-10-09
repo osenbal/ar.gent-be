@@ -9,6 +9,7 @@ import { IRequestWithUser } from '@interfaces/auth.interface';
 import { MailService } from '@services/mail.service';
 import { CURRENT_URL } from '@config/config';
 import { ROLE_USER } from '@config/constant/constant';
+import { IAddress, IEducation, IExperience } from '@interfaces/user.interface';
 
 const user = UserModel;
 const mailService = new MailService();
@@ -23,8 +24,8 @@ const adminCreate = async (
 ) => {
   try {
     const {
-      firstName,
-      lastName,
+      username,
+      fullName,
       gender,
       email,
       password,
@@ -48,10 +49,10 @@ const adminCreate = async (
 
     // check if req body is empty
     if (
-      !firstName ||
+      !username ||
       !email ||
       !password ||
-      !lastName ||
+      !fullName ||
       !gender ||
       !phoneNumber ||
       !role ||
@@ -78,8 +79,8 @@ const adminCreate = async (
 
     // new admin Object
     const userObject = {
-      firstName,
-      lastName,
+      username,
+      fullName,
       phoneNumber,
       gender,
       role,
@@ -118,8 +119,8 @@ const adminCreate = async (
 const signUp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
-      firstName,
-      lastName,
+      username,
+      fullName,
       gender,
       email,
       password,
@@ -143,10 +144,10 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 
     // check if req body is empty
     if (
-      !firstName ||
+      !username ||
       !email ||
       !password ||
-      !lastName ||
+      !fullName ||
       !gender ||
       !phoneNumber ||
       !image ||
@@ -170,22 +171,23 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const addressUser: IAddress = {
+      street,
+      city,
+      country,
+      zipCode,
+    };
     // new user Object
     const userObject = {
-      firstName,
-      lastName,
+      username,
+      fullName,
       phoneNumber,
       gender,
       email,
       password: hashedPassword,
-      photo: image,
+      avatar: image,
       birthday,
-      address: {
-        street,
-        city,
-        country,
-        zipCode,
-      },
+      address: addressUser,
     };
 
     // Create new user
@@ -249,9 +251,6 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
 const userEdit = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, gender, phoneNumber, email, password } =
-      req.body;
-    console.log('req : ', req.body);
 
     if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
 
@@ -260,32 +259,65 @@ const userEdit = async (req: Request, res: Response, next: NextFunction) => {
     if (!userFound)
       return res.status(404).json(new HttpException(404, 'User not found'));
 
-    const duplicate = await user.findOne({ email }).lean().exec();
+    // profile information
+    userFound.username = req.body.username || userFound.username;
+    userFound.fullName = req.body.lastName || userFound.fullName;
+    userFound.about = req.body.about || userFound.about;
+    userFound.phoneNumber = req.body.phoneNumber || userFound.phoneNumber;
+    userFound.gender = req.body.gender || userFound.gender;
+    userFound.birthday = req.body.birthday || userFound.birthday;
 
-    if (duplicate && duplicate._id.toString() !== id) {
-      return res
-        .status(409)
-        .json(new HttpException(409, 'Email already exists'));
+    // address
+    userFound.address.street = req.body.street || userFound.address.street;
+    userFound.address.city = req.body.city || userFound.address.city;
+    userFound.address.country = req.body.country || userFound.address.country;
+    userFound.address.zipCode = req.body.zipCode || userFound.address.zipCode;
+
+    // portfolio and etc
+    if (req.body.portfolio_url) {
+      const newPortfolio: string[] = req.body.portfolio_url;
+      userFound.portfolio_url = newPortfolio;
+    }
+    if (req.body.skill) {
+      const newSkill: string[] = req.body.skill;
+      userFound.skill = newSkill;
+    }
+    if (req.body.education) {
+      const newEducation: IEducation[] = req.body.education;
+      userFound.education = newEducation;
+    }
+    if (req.body.experience) {
+      const newExperience: IExperience[] = req.body.experience;
+      userFound.experience = newExperience;
     }
 
-    userFound.firstName = firstName ? firstName : userFound.firstName;
-    userFound.lastName = lastName ? lastName : userFound.lastName;
-    userFound.gender = gender ? gender : userFound.gender;
-    userFound.phoneNumber = phoneNumber ? phoneNumber : userFound.phoneNumber;
-    userFound.email = email ? email : userFound.email;
-
-    if (password) {
+    if (req.body.password) {
       // hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(req.body.password, 10);
       userFound.password = hashedPassword ? hashedPassword : userFound.password;
     }
 
-    const updatedUser = await userFound.save();
+    if (req.body.email) {
+      if (req.body.email === userFound.email) {
+        return res.status(400).json(new HttpException(400, 'Email as same'));
+      }
 
+      // check duplicated email
+      const duplicate = await user
+        .findOne({ email: req.body.email })
+        .lean()
+        .exec();
+      if (duplicate) {
+        return res
+          .status(409)
+          .json(new HttpException(409, 'Email already exists'));
+      }
+    }
+
+    const updatedUser = await userFound.save();
     return res.status(200).json({
       code: 200,
       message: `success update user ${updatedUser.email}`,
-      data: updatedUser,
     });
   } catch (error) {
     next(error);
@@ -333,9 +365,11 @@ const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
 
     const findUserVerification = await UserVerificationModel.find({
       userId,
-    });
+    }).exec();
 
-    if (!findUserVerification) {
+    console.log(findUserVerification);
+
+    if (findUserVerification.length === 0) {
       return res.render(`pages/404`);
     }
 
