@@ -40,12 +40,7 @@ class UserRoute implements Routes {
       .route(`${this.path}signup`)
       .post(uploadStorage('profile', filterImage).single('image'), signUp);
 
-    this.router
-      .route(`${this.path}send/verification`)
-      .get(
-        limiterMiddleware('send email verification limited', 1, 60 * 1000),
-        sendVerification
-      );
+    this.router.route(`${this.path}send/verification`).get(sendVerification);
 
     this.router
       .route(`${this.path}verify/:userId/:uniqueString`)

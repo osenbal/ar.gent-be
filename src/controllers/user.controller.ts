@@ -473,33 +473,36 @@ const sendVerification = async (
   next: NextFunction
 ) => {
   try {
-    const { email, _id } = req.body;
+    const { email } = req.body;
 
-    if (!email || !_id) {
+    if (!email) {
       return res.status(400).json(new HttpException(400, 'Bad Request'));
     }
 
-    const findUser = await user.findOne({ _id }).lean().exec();
+    const userFound = await user.findOne({ email }).lean().exec();
 
-    if (!findUser) {
+    if (!userFound) {
       return res.status(404).json(new HttpException(404, 'User not found'));
     }
 
-    if (findUser.verified) {
+    if (userFound.verified) {
       return res
         .status(409)
         .json(new HttpException(409, 'User already verified'));
     }
 
-    const findUserVerification = await UserVerificationModel.find({
-      _id,
+    const userFoundVerification = await UserVerificationModel.find({
+      userId: userFound._id,
     });
 
-    findUserVerification.forEach((item) => {
+    userFoundVerification.forEach((item) => {
       item.remove();
     });
 
-    return mailService.sendEmailVerification({ _id, email }, res);
+    return mailService.sendEmailVerification(
+      { _id: userFound._id, email },
+      res
+    );
   } catch (error) {
     next(error);
   }
