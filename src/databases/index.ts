@@ -7,7 +7,7 @@ import {
 } from '@config/database.config';
 
 export const dbConnection = {
-  url: `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/?retryWrites=true&w=majority`,
+  url: `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/${DB_DATABASE}?retryWrites=true&w=majority`,
   options: {
     useNewUrlParser: true,
     useUnifiedTopology: true,
