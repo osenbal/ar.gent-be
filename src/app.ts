@@ -22,7 +22,7 @@ class App {
   constructor(routes: Routes[]) {
     this.app = express();
     this.env = process.env.NODE_ENV || 'development';
-    this.port = process.env.APP_PORT || 8760;
+    this.port = process.env.APP_PORT || process.env.PORT;
 
     this.connectToDatabase();
     this.initialViewEngginge();
