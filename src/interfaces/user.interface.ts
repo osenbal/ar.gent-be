@@ -41,10 +41,12 @@ export interface IExperience {
 export interface ICertificate {
   title: string; // required
   urlImage: string; // required
-  startDate: Date;
-  endDate: Date;
   licenseNumber: string; //required
+  issueAt: Date;
+  expireAt: Date;
   description: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export default interface IUser {

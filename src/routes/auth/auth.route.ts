@@ -13,16 +13,7 @@ class AuthRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router
-      .route(`${this.path}login`)
-      .post(
-        limiterMiddleware(
-          'Too many login attempts, please try again after 1 minute',
-          5,
-          60 * 1000
-        ),
-        logIn
-      );
+    this.router.route(`${this.path}login`).post(logIn);
 
     this.router.route(`${this.path}refresh`).get(refresh);
 

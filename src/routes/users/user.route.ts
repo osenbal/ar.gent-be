@@ -15,6 +15,7 @@ import {
   sendVerification,
   requestResetPassword,
   resetPassword,
+  uploadImage,
 } from '@controllers/user.controller';
 import {
   authPolicyMiddleware,
@@ -40,7 +41,9 @@ class UserRoute implements Routes {
       .route(`${this.path}signup`)
       .post(uploadStorage('profile', filterImage).single('image'), signUp);
 
-    this.router.route(`${this.path}send/verification`).get(sendVerification);
+    this.router
+      .route(`${this.path}send/verification`)
+      .get(authMiddleware, authPolicyMiddleware, sendVerification);
 
     this.router
       .route(`${this.path}verify/:userId/:uniqueString`)
@@ -61,10 +64,13 @@ class UserRoute implements Routes {
       .patch(authMiddleware, authPolicyMiddleware, userEdit);
 
     this.router
-      .route(`${this.path}updateProfile/:id`)
-      .patch((req, res, next) => {
-        res.send('updateProfile');
-      });
+      .route(`${this.path}upload/:id`)
+      .put(
+        authMiddleware,
+        authPolicyMiddleware,
+        uploadStorage('profile', filterImage).single('image'),
+        uploadImage
+      );
 
     this.router
       .route(`${this.path}delete/:id`)

@@ -248,7 +248,11 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
 // @desc Create new user
 // @route POST /auth/user/edit/:id
 // @access Private
-const userEdit = async (req: Request, res: Response, next: NextFunction) => {
+const userEdit = async (
+  req: IRequestWithUser,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
 
@@ -319,6 +323,73 @@ const userEdit = async (req: Request, res: Response, next: NextFunction) => {
       code: 200,
       message: `success update user ${updatedUser.email}`,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc upload avatar or banner
+// @route POST /auth/user/upload/:id/?type=:type
+// @access Private
+const uploadImage = async (
+  req: IRequestWithUser,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.query.type)
+      return res.status(400).json(new HttpException(400, 'Bad Request'));
+
+    if (req.query.type === 'avatar') {
+      const { id } = req.params;
+      if (!id)
+        return res.status(400).json(new HttpException(400, 'Bad Request'));
+
+      const userFound = await user.findById(id).exec();
+
+      if (!userFound)
+        return res.status(404).json(new HttpException(404, 'User not found'));
+
+      const image = req.file?.path;
+      console.log(req.file);
+
+      if (!image) {
+        return res.status(400).json(new HttpException(400, 'Bad Request'));
+      }
+
+      userFound.avatar = image;
+      const updatedUser = await userFound.save();
+
+      return res.status(200).json({
+        code: 200,
+        message: `success update user ${updatedUser.email}`,
+      });
+    } else if (req.query.type === 'banner') {
+      const { id } = req.params;
+      if (!id)
+        return res.status(400).json(new HttpException(400, 'Bad Request'));
+
+      const userFound = await user.findById(id).exec();
+
+      if (!userFound)
+        return res.status(404).json(new HttpException(404, 'User not found'));
+
+      const image = req.file?.path;
+
+      if (!image) {
+        return res.status(400).json(new HttpException(400, 'Bad Request'));
+      }
+
+      userFound.banner = image;
+      const updatedUser = await userFound.save();
+
+      return res.status(200).json({
+        code: 200,
+        message: `success update user ${updatedUser.email}`,
+      });
+    }
+
+    return res.status(400).json(new HttpException(400, 'Bad Request'));
   } catch (error) {
     next(error);
   }
@@ -468,7 +539,7 @@ const verifiedUser = async (
 // @route POST /auth/user/send/verification
 // @access Public
 const sendVerification = async (
-  req: Request,
+  req: IRequestWithUser,
   res: Response,
   next: NextFunction
 ) => {
@@ -634,4 +705,5 @@ export {
   sendVerification,
   requestResetPassword,
   resetPassword,
+  uploadImage,
 };
