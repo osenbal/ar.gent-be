@@ -22,7 +22,6 @@ import {
   authRoleAndPolicyMiddleware,
   authRoleMiddleware,
 } from '@middlewares/authRole.middleware';
-import multer from 'multer';
 
 class UserRoute implements Routes {
   public path = '/auth/user/';
@@ -39,7 +38,7 @@ class UserRoute implements Routes {
 
     this.router
       .route(`${this.path}signup`)
-      .post(uploadStorage('profile', filterImage).single('image'), signUp);
+      .post(uploadStorage('profile', filterImage).single('avatar'), signUp);
 
     this.router
       .route(`${this.path}send/verification`)

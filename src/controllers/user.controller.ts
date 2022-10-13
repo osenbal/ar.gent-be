@@ -91,7 +91,7 @@ const adminCreate = async (
         street,
         city,
         country,
-        zipCode,
+        zipCode: Number(zipCode),
       },
       verified,
     };
@@ -133,9 +133,9 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
     } = req.body;
 
     let { role } = req.body;
+    let dateBirthday;
 
-    // Get path photo upload from request
-    const image = req.file.path;
+    const avatarPath = req.file?.path;
 
     // role user for normal user
     if (!isEmpty(role) || role === '') {
@@ -150,7 +150,7 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
       !fullName ||
       !gender ||
       !phoneNumber ||
-      !image ||
+      !avatarPath ||
       !birthday ||
       !street ||
       !city ||
@@ -177,6 +177,11 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
       country,
       zipCode,
     };
+
+    if (typeof birthday === 'string') {
+      dateBirthday = new Date(birthday);
+    }
+
     // new user Object
     const userObject = {
       username,
@@ -185,8 +190,8 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
       gender,
       email,
       password: hashedPassword,
-      avatar: image,
-      birthday,
+      avatar: req.protocol + '://' + req.get('host') + '/' + avatarPath,
+      birthday: dateBirthday,
       address: addressUser,
     };
 

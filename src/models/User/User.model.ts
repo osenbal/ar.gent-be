@@ -7,11 +7,12 @@ import IUser, {
 } from '@interfaces/user.interface';
 import { model, Schema } from 'mongoose';
 import { ROLE_USER } from '@config/constant/constant';
+import { CURRENT_URL } from '@/config/config';
 
 const UserSchema = new Schema<IUser>({
   banner: {
     type: String,
-    default: 'public/defaults/profile/bannerProfile.png',
+    default: `${CURRENT_URL}public/defaults/profile/bannerProfile.png`,
   },
   avatar: {
     type: String,
