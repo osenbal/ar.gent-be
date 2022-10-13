@@ -74,6 +74,12 @@ const adminCreate = async (
         .json(new HttpException(409, 'Email already exists'));
     }
 
+    if (duplicate.username === username) {
+      return res
+        .status(409)
+        .json(new HttpException(409, 'Username already exists'));
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -166,6 +172,12 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
       return res
         .status(409)
         .json(new HttpException(409, 'Email already exists'));
+    }
+    const duplicateUsername = await user.findOne({ username }).lean().exec();
+    if (duplicateUsername) {
+      return res
+        .status(409)
+        .json(new HttpException(409, 'Username already exists'));
     }
 
     // Hash password
