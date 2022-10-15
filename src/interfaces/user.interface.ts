@@ -1,15 +1,14 @@
 import { Types } from 'mongoose';
 
-export interface UserVerification {
-  userId: Types.ObjectId;
-  uniqueString: string;
-  createdAt: Date;
-  expiresAt: Date;
+export enum EGender {
+  MALE = 'male',
+  FEMALE = 'female',
+  OTHER = 'other',
 }
 
-export enum EGender {
-  male = 'male',
-  female = 'female',
+export enum ERole {
+  ADMIN = 'admin',
+  USER = 'user',
 }
 
 export interface IAddress {
@@ -24,7 +23,7 @@ export interface IEducation {
   degree: string;
   location: string;
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
   description: string;
 }
 
@@ -33,7 +32,7 @@ export interface IExperience {
   position: string;
   isPresent: boolean;
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
   description: string;
   location: string;
 }
@@ -46,7 +45,19 @@ export interface ICertificate {
   expireAt: Date;
   description: string;
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt: Date | null;
+}
+
+export interface IUserRegister {
+  avatar: string;
+  username: string;
+  fullName: string;
+  phoneNumber: string;
+  gender: EGender;
+  birthday: Date;
+  address: IAddress;
+  email: string;
+  password: string;
 }
 
 export default interface IUser {
@@ -75,25 +86,12 @@ export default interface IUser {
   deletedAt: Date | null;
 }
 
-// export interface ICertificate {
-//   _id: Types.ObjectId;
-//   userId: Types.ObjectId;
-//   name: string;
-//   image: string;
-//   url: string;
-//   issueAt: Date;
-//   expireAt: Date;
-// }
-
-// export interface ISkill {
-//   _id: Types.ObjectId;
-//   name: string;
-// }
-
-// export interface ISkill_User {
-//   userId: Types.ObjectId;
-//   skillId: Types.ObjectId;
-// }
+export interface UserVerification {
+  userId: Types.ObjectId;
+  uniqueString: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
 
 export interface IResetPassword {
   _id: Types.ObjectId;

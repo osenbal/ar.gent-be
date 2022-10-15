@@ -12,10 +12,13 @@ const authMiddleware = async (
   next: NextFunction
 ) => {
   try {
-    const Authorization = req.header('Authorization')
-      ? req.header('Authorization').split('Bearer ')[1]
-      : null;
+    // const Authorization = req.header('Authorization')
+    //   ? req.header('Authorization').split('Bearer ')[1]
+    //   : null;
+    const { Authorization } = req.cookies;
 
+    console.log('auth token : ', Authorization);
+    console.log('test');
     if (Authorization) {
       const secretKey: string = ACCESS_TOKEN_SECRET;
       const verificationResponse = (await verify(
@@ -36,6 +39,7 @@ const authMiddleware = async (
       next(new HttpException(404, 'Authentication token missing'));
     }
   } catch (error) {
+    console.log('========================errr');
     next(new HttpException(401, 'Wrong authentication token'));
   }
 };

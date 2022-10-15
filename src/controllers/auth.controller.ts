@@ -14,14 +14,19 @@ const logIn = async (req: Request, res: Response, next: NextFunction) => {
     const userData = req.body;
     const { refreshTokenData, accessToken } = await authService.login(userData);
 
-    res.cookie('Authorization', refreshTokenData.token, {
+    res.cookie('Authorization', accessToken.token, {
       httpOnly: true,
-      // secure: true,
-      sameSite: 'none',
+      maxAge: accessToken.expiresIn,
+    });
+
+    res.cookie('refreshToken', refreshTokenData.token, {
+      httpOnly: true,
       maxAge: refreshTokenData.expiresIn,
     });
 
-    res.status(200).json({ code: 200, message: 'OK', data: { accessToken } });
+    res
+      .status(200)
+      .json({ code: 200, message: 'OK', data: { refreshTokenData } });
   } catch (error) {
     next(error);
   }
@@ -47,7 +52,7 @@ const refresh = async (req: Request, res: Response, next: NextFunction) => {
       httpOnly: true,
       // secure: true,
       sameSite: 'none',
-      maxAge: refreshTokenData.expiresIn,
+      maxAge: refreshTokenData.expiresIn * 1000,
     });
 
     res.status(200).json({ code: 200, message: 'OK', data: { accessToken } });

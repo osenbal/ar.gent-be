@@ -12,7 +12,7 @@ import { CURRENT_URL } from '@/config/config';
 const UserSchema = new Schema<IUser>({
   banner: {
     type: String,
-    default: `${CURRENT_URL}public/defaults/profile/bannerProfile.png`,
+    default: `${CURRENT_URL}public/defaults/profile/banner_default.jpg`,
   },
   avatar: {
     type: String,
@@ -21,7 +21,7 @@ const UserSchema = new Schema<IUser>({
   username: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   fullName: {
     type: String,

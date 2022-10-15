@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import limiterMiddleware from '@/middlewares/limiter.midleware';
 import authMiddleware from '@middlewares/auth.middleware';
 import { logIn, logout, refresh } from '@controllers/auth.controller';
 import { Routes } from '@interfaces/routes.interface';
+import { IRequestWithUser } from '@/interfaces/auth.interface';
 
 class AuthRoute implements Routes {
   public path = '/auth/';

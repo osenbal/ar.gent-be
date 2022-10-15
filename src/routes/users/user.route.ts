@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { Routes } from '@interfaces/routes.interface';
-import limiterMiddleware from '@middlewares/limiter.midleware';
 import authMiddleware from '@middlewares/auth.middleware';
 import uploadStorage, { filterImage } from '@middlewares/storage.middleware';
 import {
@@ -16,6 +15,9 @@ import {
   requestResetPassword,
   resetPassword,
   uploadImage,
+  getCurrentUser,
+  verifyToken,
+  getCurrentUserDetail,
 } from '@controllers/user.controller';
 import {
   authPolicyMiddleware,
@@ -40,17 +42,13 @@ class UserRoute implements Routes {
       .route(`${this.path}signup`)
       .post(uploadStorage('profile', filterImage).single('avatar'), signUp);
 
-    this.router
-      .route(`${this.path}send/verification`)
-      .get(authMiddleware, authPolicyMiddleware, sendVerification);
+    this.router.route(`${this.path}`).get(authMiddleware, getCurrentUser);
 
     this.router
-      .route(`${this.path}verify/:userId/:uniqueString`)
-      .get(verifyUser);
+      .route(`${this.path}verify-token`)
+      .get(authMiddleware, verifyToken);
 
-    this.router
-      .route(`${this.path}verified/:userId/:uniqueString`)
-      .get(verifiedUser);
+    this.router.route(`${this.path}detail`).get(getCurrentUserDetail);
 
     this.router
       .route(`${this.path}all`)
@@ -75,6 +73,20 @@ class UserRoute implements Routes {
       .route(`${this.path}delete/:id`)
       .delete(authMiddleware, authRoleAndPolicyMiddleware('admin'), userDelete);
 
+    // email verification
+    this.router
+      .route(`${this.path}send/verification`)
+      .get(authMiddleware, authPolicyMiddleware, sendVerification);
+
+    this.router
+      .route(`${this.path}verify/:userId/:uniqueString`)
+      .get(verifyUser);
+
+    this.router
+      .route(`${this.path}verified/:userId/:uniqueString`)
+      .get(verifiedUser);
+
+    // password reset
     this.router
       .route(`${this.path}send/reset-password`)
       .post(requestResetPassword);

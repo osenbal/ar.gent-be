@@ -2,13 +2,99 @@ import UserModel from '@/models/User/User.model';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config/config';
-import IUser from '@interfaces/user.interface';
+import IUser, { IAddress, IUserRegister } from '@interfaces/user.interface';
 import { ITokenData, IDataStoredInToken } from '@interfaces/auth.interface';
 import { isEmpty } from '@utils/util';
 import { HttpException } from '@/exceptions/HttpException';
+import { Request } from 'express';
 
 class AuthService {
   public user = UserModel;
+
+  public async register(newUser, avatar) {
+    if (isEmpty(newUser)) throw new HttpException(400, 'Bad request');
+
+    const {
+      username,
+      fullName,
+      gender,
+      email,
+      password,
+      phoneNumber,
+      birthday,
+      street,
+      city,
+      country,
+      zipCode,
+    } = newUser;
+
+    if (
+      !username ||
+      !email ||
+      !password ||
+      !fullName ||
+      !gender ||
+      !phoneNumber ||
+      !avatar ||
+      !birthday ||
+      !street ||
+      !city ||
+      !country ||
+      !zipCode
+    ) {
+      throw new HttpException(400, 'Bad request');
+    }
+
+    const findUser = await this.user
+      .findOne({
+        email: newUser.email,
+      })
+      .lean()
+      .exec();
+
+    if (findUser)
+      throw new HttpException(
+        409,
+        `This email ${newUser.email} already exists`
+      );
+
+    const duplicateUsername = await this.user
+      .findOne({ username: newUser.username })
+      .lean()
+      .exec();
+
+    if (duplicateUsername) {
+      throw new HttpException(
+        409,
+        `This username ${newUser.username} already exists`
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newUser.password, 10);
+
+    const addressUser: IAddress = {
+      street: newUser.street,
+      city: newUser.city,
+      country: newUser.country,
+      zipCode: newUser.zipCode,
+    };
+
+    const newUserObject: IUserRegister = {
+      avatar: avatar,
+      username: newUser.username,
+      fullName: newUser.fullName,
+      phoneNumber: newUser.phoneNumber,
+      gender: newUser.gender,
+      birthday: new Date(newUser.birthday),
+      address: addressUser,
+      email: newUser.email,
+      password: hashedPassword,
+    };
+
+    const createUserData: IUser = await this.user.create(newUserObject);
+
+    return createUserData;
+  }
 
   public async login(
     userData
@@ -68,40 +154,40 @@ class AuthService {
     return foundUser;
   }
 
-  public createToken(user: IUser): ITokenData {
-    const IdataStoredInToken: IDataStoredInToken = {
-      _id: user._id.toString(),
-      role: user.role,
+  public createToken(userData: IUser): ITokenData {
+    const dataStoredInToken: IDataStoredInToken = {
+      _id: userData._id.toString(),
+      role: userData.role,
     };
 
     const secretKey: string = ACCESS_TOKEN_SECRET;
 
-    const expiresIn: number = 60 * 60; // an hour
+    const expiresIn: number = 1000 * 60 * 60; // an hour
 
     return {
       expiresIn: expiresIn,
-      token: jwt.sign(IdataStoredInToken, secretKey, { expiresIn }),
+      token: jwt.sign(dataStoredInToken, secretKey, { expiresIn }),
     };
   }
 
   public createRefreshToken(user: IUser): ITokenData {
-    const IdataStoredInToken: IDataStoredInToken = {
+    const dataStoredInToken: IDataStoredInToken = {
       _id: user._id.toString(),
       role: user.role,
     };
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
 
-    const expiresIn: number = 60 * 60 * 24 * 7; // a week
+    const expiresIn: number = 1000 * 60 * 60 * 24 * 7; // a week
 
     return {
       expiresIn: expiresIn,
-      token: jwt.sign(IdataStoredInToken, secretKey, { expiresIn }),
+      token: jwt.sign(dataStoredInToken, secretKey, { expiresIn }),
     };
   }
 
-  public createCookie(refreshToken: ITokenData): string {
-    return `Authorization=${refreshToken.token}; HttpOnly; secure; Max-Age=${refreshToken.expiresIn};`;
+  public createCookie(accessToken: ITokenData): string {
+    return `Authorization=${accessToken.token}; HttpOnly; secure; Max-Age=${accessToken.expiresIn};`;
   }
 }
 

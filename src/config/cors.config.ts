@@ -5,6 +5,7 @@ config({ path: '.env' });
 const whitelist = [process.env.ORIGIN];
 
 const corsOptions = {
+  credentials: true,
   origin: (origin, callback) => {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true);
