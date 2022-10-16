@@ -18,19 +18,19 @@
       "compress": false,
       "mangle": false
     },
-    "baseUrl": "src",
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["*"],
-      "@config/*": ["config/*"],
-      "@controllers/*": ["controllers/*"],
-      "@databases/*": ["databases/*"],
-      "@exceptions/*": ["exceptions/*"],
-      "@interfaces/*": ["interfaces/*"],
-      "@middlewares/*": ["middlewares/*"],
-      "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"],
-      "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
+      "@/*": ["src/*"],
+      "@config/*": ["src/config/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@databases/*": ["src/databases/*"],
+      "@exceptions/*": ["src/exceptions/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@middlewares/*": ["src/middlewares/*"],
+      "@models/*": ["src/models/*"],
+      "@routes/*": ["src/routes/*"],
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"]
     }
   },
   "module": {

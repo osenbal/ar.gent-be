@@ -9,7 +9,11 @@ const authService = new AuthService();
 // @desc Login user
 // @route POST /auth/login
 // @access Public
-const logIn = async (req: Request, res: Response, next: NextFunction) => {
+export const logIn = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userData = req.body;
     const { refreshTokenData, accessToken } = await authService.login(userData);
@@ -35,7 +39,11 @@ const logIn = async (req: Request, res: Response, next: NextFunction) => {
 // @desc Refresh
 // @route POST /auth/refresh
 // @access Private - because access token has expired
-const refresh = async (req: Request, res: Response, next: NextFunction) => {
+export const refresh = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const cookies = req.cookies;
     if (!cookies?.Authorization) {
@@ -64,7 +72,7 @@ const refresh = async (req: Request, res: Response, next: NextFunction) => {
 // @desc logout
 // @route POST /auth/logout
 // @access Private - just to clear cookie if exist
-const logout = async (
+export const logout = async (
   req: IRequestWithUser,
   res: Response,
   next: NextFunction
@@ -85,5 +93,3 @@ const logout = async (
     next(error);
   }
 };
-
-export { logIn, refresh, logout };

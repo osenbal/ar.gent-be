@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
 import { connect, ConnectOptions, set } from 'mongoose';
 import { Routes } from '@interfaces/routes.interface';
-import { dbConnection } from '@/databases';
+import { Database } from '@/databases';
 import { LOG_FORMAT } from '@config/config';
 import { stream, logger } from '@utils/logger';
 
@@ -42,9 +42,7 @@ class App {
       set('debug', true);
     }
 
-    connect(dbConnection.url, dbConnection.options as ConnectOptions);
-
-    console.log('Connected to database');
+    Database.getInstance();
   }
 
   /**
@@ -56,8 +54,6 @@ class App {
     this.app.use(cookieParser());
     this.app.use(bodyParser.urlencoded({ extended: true }));
     this.app.use(bodyParser.json());
-    // this.app.use(express.json());
-    // this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cors(corsOptions));
     this.app.use(express.static(path.join(__dirname, 'public')));
     this.app.use('/public', express.static('public'));

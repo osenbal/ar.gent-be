@@ -129,6 +129,7 @@ export const signUp = async (
   next: NextFunction
 ) => {
   try {
+    // create new user
     const newUser = await authService.register(
       req.body,
       req.protocol + '://' + req.get('host') + '/' + req.file?.path
@@ -138,16 +139,17 @@ export const signUp = async (
       const accessToken = authService.createToken(newUser);
       const refreshToken = authService.createRefreshToken(newUser);
 
+      // set cookie auth token
       res.cookie('Authorization', accessToken.token, {
         httpOnly: true,
         maxAge: accessToken.expiresIn,
       });
-
       res.cookie('refreshToken', refreshToken.token, {
         httpOnly: true,
         maxAge: refreshToken.expiresIn,
       });
 
+      // send email verification
       return mailService.sendEmailVerification(newUser, res);
     } else {
       return res
@@ -161,7 +163,7 @@ export const signUp = async (
 
 // @desc Create new user
 // @route POST /auth/user/all
-// @access Public
+// @access Private
 export const getAllUser = async (
   req: Request,
   res: Response,
@@ -201,7 +203,7 @@ export const getCurrentUser = (
 // @desc verify token and send current user summary data
 // @route GET /auth/user/verify-token
 // @access Private
-export const verifyToken = async (
+export const getUserSummary = async (
   req: IRequestWithUser,
   res: Response,
   next: NextFunction
@@ -367,6 +369,8 @@ export const userEdit = async (
           .status(409)
           .json(new HttpException(409, 'Email already exists'));
       }
+
+      userFound.email = req.body.email;
     }
 
     const updatedUser = await userFound.save();
@@ -388,55 +392,59 @@ export const uploadImage = async (
   next: NextFunction
 ) => {
   try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
+
     if (!req.query.type)
       return res.status(400).json(new HttpException(400, 'Bad Request'));
 
     if (req.query.type === 'avatar') {
-      const { id } = req.params;
-      if (!id)
-        return res.status(400).json(new HttpException(400, 'Bad Request'));
-
       const userFound = await user.findById(id).exec();
 
       if (!userFound)
         return res.status(404).json(new HttpException(404, 'User not found'));
 
-      const image = req.file?.path;
-      console.log(req.file);
+      const imagePath =
+        req.file?.path ||
+        req.protocol + '://' + req.get('host') + '/' + userFound.avatar;
 
-      if (!image) {
+      if (!imagePath) {
         return res.status(400).json(new HttpException(400, 'Bad Request'));
       }
 
-      userFound.avatar = image;
+      userFound.avatar =
+        req.protocol + '://' + req.get('host') + '/' + imagePath;
+
       const updatedUser = await userFound.save();
 
       return res.status(200).json({
         code: 200,
         message: `success update user ${updatedUser.email}`,
+        data: updatedUser.avatar,
       });
     } else if (req.query.type === 'banner') {
-      const { id } = req.params;
-      if (!id)
-        return res.status(400).json(new HttpException(400, 'Bad Request'));
-
       const userFound = await user.findById(id).exec();
 
       if (!userFound)
         return res.status(404).json(new HttpException(404, 'User not found'));
 
-      const image = req.file?.path;
+      const imagePath =
+        req.file?.path ||
+        req.protocol + '://' + req.get('host') + '/' + userFound.banner;
 
-      if (!image) {
+      if (!imagePath) {
         return res.status(400).json(new HttpException(400, 'Bad Request'));
       }
 
-      userFound.banner = image;
+      userFound.banner =
+        req.protocol + '://' + req.get('host') + '/' + imagePath;
+
       const updatedUser = await userFound.save();
 
       return res.status(200).json({
         code: 200,
         message: `success update user ${updatedUser.email}`,
+        data: updatedUser.banner,
       });
     }
 

@@ -3,7 +3,6 @@
   "compilerOptions": {
     "target": "es2022",
     "lib": ["es2022", "esnext.asynciterable"],
-    "baseUrl": "./src",
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"],
     "allowSyntheticDefaultImports": true,
@@ -20,20 +19,21 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "importHelpers": true,
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["*"],
-      "@config/*": ["config/*"],
-      "@controllers/*": ["controllers/*"],
-      "@databases/*": ["databases/*"],
-      "@exceptions/*": ["exceptions/*"],
-      "@interfaces/*": ["interfaces/*"],
-      "@middlewares/*": ["middlewares/*"],
-      "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"],
-      "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
+      "@/*": ["src/*"],
+      "@config/*": ["src/config/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@databases/*": ["src/databases/*"],
+      "@exceptions/*": ["src/exceptions/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@middlewares/*": ["src/middlewares/*"],
+      "@models/*": ["src/models/*"],
+      "@routes/*": ["src/routes/*"],
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.json", ".env"],
+  "include": ["src/**/*.ts", "src/**/*.json", ".env", "src/sum.ts"],
   "exclude": ["node_modules", "src/http", "src/logs", "src/tests"]
 }

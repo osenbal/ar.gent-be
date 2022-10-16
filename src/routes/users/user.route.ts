@@ -16,7 +16,7 @@ import {
   resetPassword,
   uploadImage,
   getCurrentUser,
-  verifyToken,
+  getUserSummary,
   getCurrentUserDetail,
 } from '@controllers/user.controller';
 import {
@@ -46,7 +46,7 @@ class UserRoute implements Routes {
 
     this.router
       .route(`${this.path}verify-token`)
-      .get(authMiddleware, verifyToken);
+      .get(authMiddleware, getUserSummary);
 
     this.router.route(`${this.path}detail`).get(getCurrentUserDetail);
 
