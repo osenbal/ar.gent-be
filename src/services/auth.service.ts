@@ -1,32 +1,21 @@
-import UserModel from '@/models/User/User.model';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config/config';
-import IUser, { IAddress, IUserRegister } from '@interfaces/user.interface';
-import { ITokenData, IDataStoredInToken } from '@interfaces/auth.interface';
-import { isEmpty } from '@utils/util';
-import { HttpException } from '@/exceptions/HttpException';
-import { Request } from 'express';
+import UserModel from "@/models/User/User.model";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "@config/config";
+import IUser, { IAddress, IUserRegister } from "@interfaces/user.interface";
+import { ITokenData, IDataStoredInToken } from "@interfaces/auth.interface";
+import { isEmpty } from "@utils/util";
+import { HttpException } from "@/exceptions/HttpException";
+import { Request } from "express";
 
 class AuthService {
   public user = UserModel;
 
-  public async register(newUser, avatar) {
-    if (isEmpty(newUser)) throw new HttpException(400, 'Bad request');
+  public async register(req, newUser, avatar) {
+    if (isEmpty(newUser)) throw new HttpException(400, "Bad request");
+    if (isEmpty(avatar)) throw new HttpException(400, "Bad request");
 
-    const {
-      username,
-      fullName,
-      gender,
-      email,
-      password,
-      phoneNumber,
-      birthday,
-      street,
-      city,
-      country,
-      zipCode,
-    } = newUser;
+    const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = newUser;
 
     if (
       !username ||
@@ -42,7 +31,7 @@ class AuthService {
       !country ||
       !zipCode
     ) {
-      throw new HttpException(400, 'Bad request');
+      throw new HttpException(400, "Bad request");
     }
 
     const findUser = await this.user
@@ -52,22 +41,12 @@ class AuthService {
       .lean()
       .exec();
 
-    if (findUser)
-      throw new HttpException(
-        409,
-        `This email ${newUser.email} already exists`
-      );
+    if (findUser) throw new HttpException(409, `This email ${newUser.email} already exists`);
 
-    const duplicateUsername = await this.user
-      .findOne({ username: newUser.username })
-      .lean()
-      .exec();
+    const duplicateUsername = await this.user.findOne({ username: newUser.username }).lean().exec();
 
     if (duplicateUsername) {
-      throw new HttpException(
-        409,
-        `This username ${newUser.username} already exists`
-      );
+      throw new HttpException(409, `This username ${newUser.username} already exists`);
     }
 
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
@@ -80,7 +59,7 @@ class AuthService {
     };
 
     const newUserObject: IUserRegister = {
-      avatar: avatar,
+      avatar: req.protocol + "://" + req.get("host") + "/" + avatar,
       username: newUser.username,
       fullName: newUser.fullName,
       phoneNumber: newUser.phoneNumber,
@@ -96,26 +75,14 @@ class AuthService {
     return createUserData;
   }
 
-  public async login(
-    userData
-  ): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
-    if (isEmpty(userData)) throw new HttpException(400, 'Unauthorized');
+  public async login(userData): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+    if (isEmpty(userData)) throw new HttpException(400, "Unauthorized");
 
-    const foundUser: IUser = await this.user
-      .findOne({ email: userData.email })
-      .exec();
-    if (!foundUser)
-      throw new HttpException(
-        409,
-        `This email ${userData.email} was not found`
-      );
+    const foundUser: IUser = await this.user.findOne({ email: userData.email }).exec();
+    if (!foundUser) throw new HttpException(409, `This email ${userData.email} was not found`);
 
-    const isPasswordMatching: boolean = await bcrypt.compare(
-      userData.password,
-      foundUser.password
-    );
-    if (!isPasswordMatching)
-      throw new HttpException(409, 'Password is not matching');
+    const isPasswordMatching: boolean = await bcrypt.compare(userData.password, foundUser.password);
+    if (!isPasswordMatching) throw new HttpException(409, "Password is not matching");
 
     const accessToken = this.createToken(foundUser);
     const refreshTokenData = this.createRefreshToken(foundUser);
@@ -123,16 +90,14 @@ class AuthService {
     return { refreshTokenData, accessToken };
   }
 
-  public async refresh(
-    refreshToken: string
-  ): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
-    if (!refreshToken) throw new HttpException(400, 'Unauthorized');
+  public async refresh(refreshToken: string): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+    if (!refreshToken) throw new HttpException(400, "Unauthorized");
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
     const { _id } = jwt.verify(refreshToken, secretKey) as IDataStoredInToken;
 
     const user = await this.user.findById(_id).exec();
-    if (!user) throw new HttpException(409, 'User not found');
+    if (!user) throw new HttpException(409, "User not found");
 
     const accessToken: ITokenData = this.createToken(user);
     const refreshTokenData: ITokenData = this.createRefreshToken(user);
@@ -141,15 +106,11 @@ class AuthService {
   }
 
   public async logout(userData: IUser): Promise<IUser> {
-    if (isEmpty(userData)) throw new HttpException(400, 'userData is empty');
+    if (isEmpty(userData)) throw new HttpException(400, "userData is empty");
 
     const foundUser: IUser = await this.user.findOne({ email: userData.email });
 
-    if (!foundUser)
-      throw new HttpException(
-        409,
-        `This email ${userData.email} was not found`
-      );
+    if (!foundUser) throw new HttpException(409, `This email ${userData.email} was not found`);
 
     return foundUser;
   }

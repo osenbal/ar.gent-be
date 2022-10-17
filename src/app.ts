@@ -1,18 +1,18 @@
-import path from 'path';
-import express from 'express';
-import swaggerJSDoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import cors from 'cors';
-import morgan from 'morgan';
-import errorMiddleware from '@middlewares/error.middleware';
-import corsOptions from '@config/cors.config';
-import cookieParser from 'cookie-parser';
-import bodyParser from 'body-parser';
-import { connect, ConnectOptions, set } from 'mongoose';
-import { Routes } from '@interfaces/routes.interface';
-import { Database } from '@/databases';
-import { LOG_FORMAT } from '@config/config';
-import { stream, logger } from '@utils/logger';
+import path from "path";
+import express from "express";
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import cors from "cors";
+import morgan from "morgan";
+import errorMiddleware from "@middlewares/error.middleware";
+import corsOptions from "@config/cors.config";
+import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
+import { connect, ConnectOptions, set } from "mongoose";
+import { Routes } from "@interfaces/routes.interface";
+import { Database } from "@/databases";
+import { LOG_FORMAT } from "@config/config";
+import { stream, logger } from "@utils/logger";
 
 class App {
   public app: express.Application;
@@ -21,10 +21,10 @@ class App {
 
   constructor(routes: Routes[]) {
     this.app = express();
-    this.env = process.env.NODE_ENV || 'development';
+    this.env = process.env.NODE_ENV || "development";
     this.port = process.env.APP_PORT || process.env.PORT;
 
-    this.connectToDatabase();
+    // this.connectToDatabase();
     this.initialViewEngginge();
     this.initialMiddlewares();
     this.initializeRoutes(routes);
@@ -37,9 +37,9 @@ class App {
     return this.app;
   }
 
-  private connectToDatabase() {
-    if (this.env !== 'production') {
-      set('debug', true);
+  public connectToDatabase() {
+    if (this.env !== "production") {
+      set("debug", true);
     }
 
     Database.getInstance();
@@ -55,13 +55,13 @@ class App {
     this.app.use(bodyParser.urlencoded({ extended: true }));
     this.app.use(bodyParser.json());
     this.app.use(cors(corsOptions));
-    this.app.use(express.static(path.join(__dirname, 'public')));
-    this.app.use('/public', express.static('public'));
+    this.app.use(express.static(path.join(__dirname, "public")));
+    this.app.use("/public", express.static("public"));
   }
 
   private initialViewEngginge() {
-    this.app.set('view engine', 'ejs');
-    this.app.set('views', path.join(__dirname, 'views'));
+    this.app.set("view engine", "ejs");
+    this.app.set("views", path.join(__dirname, "views"));
   }
 
   /**
@@ -70,7 +70,7 @@ class App {
    **/
   private initializeRoutes(routes: Routes[]) {
     routes.forEach((route) => {
-      this.app.use('/', route.router);
+      this.app.use("/", route.router);
     });
   }
 
@@ -82,16 +82,16 @@ class App {
     const options = {
       swaggerDefinition: {
         info: {
-          title: 'REST API',
-          version: '1.0.0',
-          description: 'Documentation for REST API',
+          title: "REST API",
+          version: "1.0.0",
+          description: "Documentation for REST API",
         },
       },
-      apis: ['swagger.yaml'],
+      apis: ["swagger.yaml"],
     };
 
     const specs = swaggerJSDoc(options);
-    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
   }
 
   private initializeErrorHandling() {
@@ -100,17 +100,17 @@ class App {
 
   private initializeNotFoundRouter() {
     // Handle 404
-    this.app.all('*', (req, res) => {
+    this.app.all("*", (req, res) => {
       res.status(404);
 
-      if (req.accepts('html')) {
-        res.render('pages/404');
+      if (req.accepts("html")) {
+        res.render("pages/404");
         return;
-      } else if (req.accepts('json')) {
-        res.json({ status: 404, error: 'Not found' });
+      } else if (req.accepts("json")) {
+        res.json({ status: 404, error: "Not found" });
         return;
       } else {
-        res.type('txt').send('Not found');
+        res.type("txt").send("Not found");
         return;
       }
     });

@@ -1,14 +1,14 @@
-import mongoose, { ConnectOptions } from 'mongoose';
-import {
-  DB_DATABASE,
-  DB_HOST,
-  DB_PORT,
-  DB_USERNAME,
-  DB_PASSWORD,
-} from '@config/database.config';
+import mongoose, { ConnectOptions } from "mongoose";
+import { DB_DATABASE, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD } from "@config/database.config";
 
 export const DbConfig = {
-  url: `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/${DB_DATABASE}?retryWrites=true&w=majority`,
+  // url: `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/${DB_DATABASE}?retryWrites=true&w=majority`,
+  url:
+    process.env.NODE_ENV === "test"
+      ? "mongodb://localhost:27017/test"
+      : process.env.NODE_ENV === "development"
+      ? `mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`
+      : `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/${DB_DATABASE}?retryWrites=true&w=majority`,
   options: {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -22,8 +22,8 @@ export class Database {
     if (dbUrl) {
       mongoose
         .connect(dbUrl, DbConfig.options as ConnectOptions)
-        .then(() => console.log('Connected with database'))
-        .catch(() => console.log('Not connected with database'));
+        .then(() => console.log("Connected with database"))
+        .catch(() => console.log("Not connected with database"));
     }
   }
   static getInstance() {

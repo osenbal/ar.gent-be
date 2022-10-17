@@ -1,51 +1,32 @@
-import { NextFunction, Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import UserModel from '@models/User/User.model';
-import UserVerificationModel from '@models/User/UserVerification.model';
-import UserResetPasswordModel from '@models/User/UserResetPassword.model';
-import AuthService from '@services/auth.service';
-import { HttpException } from '@exceptions/HttpException';
-import { MailService } from '@services/mail.service';
-import { CURRENT_URL } from '@config/config';
-import { IRequestWithUser } from '@interfaces/auth.interface';
-import { IEducation, IExperience } from '@interfaces/user.interface';
-import { isEmpty } from '@utils/util';
+import { NextFunction, Request, Response } from "express";
+import bcrypt from "bcrypt";
+import UserModel from "@models/User/User.model";
+import UserVerificationModel from "@models/User/UserVerification.model";
+import UserResetPasswordModel from "@models/User/UserResetPassword.model";
+import AuthService from "@services/auth.service";
+import { HttpException } from "@exceptions/HttpException";
+import { MailService } from "@services/mail.service";
+import { CURRENT_URL } from "@config/config";
+import { IRequestWithUser } from "@interfaces/auth.interface";
+import { IEducation, IExperience } from "@interfaces/user.interface";
+import { isEmpty } from "@utils/util";
 
 const authService = new AuthService();
 const user = UserModel;
 const mailService = new MailService();
 
 // @desc Create new super admin
-// @route POST /auth/user/admin-create
+// @route POST /user/admin-create
 // @access Private
-export const adminCreate = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const adminCreate = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const {
-      username,
-      fullName,
-      gender,
-      email,
-      password,
-      phoneNumber,
-      birthday,
-      street,
-      city,
-      country,
-      zipCode,
-    } = req.body;
+    const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = req.body;
 
-    if (req.user.role !== 'admin')
-      return res
-        .status(401)
-        .json(new HttpException(401, 'Unauthorized (not allowed)'));
+    if (req.user.role !== "admin") return res.status(401).json(new HttpException(401, "Unauthorized (not allowed)"));
 
     // role admin for super admin
     let { role } = req.body;
-    role = 'admin';
+    role = "admin";
     const verified = true;
 
     // check if req body is empty
@@ -64,21 +45,17 @@ export const adminCreate = async (
       !zipCode ||
       !verified
     ) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+      return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
     // check duplicated email
     const duplicate = await user.findOne({ email }).lean().exec();
     if (duplicate) {
-      return res
-        .status(409)
-        .json(new HttpException(409, 'Email already exists'));
+      return res.status(409).json(new HttpException(409, "Email already exists"));
     }
 
     if (duplicate.username === username) {
-      return res
-        .status(409)
-        .json(new HttpException(409, 'Username already exists'));
+      return res.status(409).json(new HttpException(409, "Username already exists"));
     }
 
     // Hash password
@@ -107,13 +84,9 @@ export const adminCreate = async (
     const newUser = await user.create(userObject);
 
     if (newUser) {
-      return res
-        .status(201)
-        .json({ code: 201, message: 'Created', data: newUser });
+      return res.status(201).json({ code: 201, message: "Created", data: newUser });
     } else {
-      return res
-        .status(400)
-        .json(new HttpException(400, 'Invalid user data received'));
+      return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
   } catch (error) {
     next(error);
@@ -121,30 +94,23 @@ export const adminCreate = async (
 };
 
 // @desc Create new user
-// @route POST /auth/user/signup
+// @route POST /user
 // @access Public
-export const signUp = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const signUp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // create new user
-    const newUser = await authService.register(
-      req.body,
-      req.protocol + '://' + req.get('host') + '/' + req.file?.path
-    );
+    const newUser = await authService.register(req, req.body, req.file?.path);
 
     if (newUser) {
       const accessToken = authService.createToken(newUser);
       const refreshToken = authService.createRefreshToken(newUser);
 
       // set cookie auth token
-      res.cookie('Authorization', accessToken.token, {
+      res.cookie("Authorization", accessToken.token, {
         httpOnly: true,
         maxAge: accessToken.expiresIn,
       });
-      res.cookie('refreshToken', refreshToken.token, {
+      res.cookie("refreshToken", refreshToken.token, {
         httpOnly: true,
         maxAge: refreshToken.expiresIn,
       });
@@ -152,67 +118,53 @@ export const signUp = async (
       // send email verification
       return mailService.sendEmailVerification(newUser, res);
     } else {
-      return res
-        .status(400)
-        .json(new HttpException(400, 'Invalid user data received'));
+      return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
   } catch (error) {
     next(error);
   }
 };
 
-// @desc Create new user
-// @route POST /auth/user/all
+// @desc Get all users
+// @route GET /user/all
 // @access Private
-export const getAllUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await user
-      .find({ role: ['user'] })
-      .select('-password')
+      .find({ role: ["user"] })
+      .select("-password")
       .lean();
 
     if (!users?.length) {
-      return res.status(400).json(new HttpException(400, 'No users found'));
+      return res.status(400).json(new HttpException(400, "No users found"));
     }
 
-    return res.status(200).json({ code: 200, message: 'OK', data: users });
+    return res.status(200).json({ code: 200, message: "OK", data: users });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc get current user
-// @route GET /auth/user/
+// @route GET /user/
 // @access Private
-export const getCurrentUser = (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const getCurrentUser = (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    return res.status(200).json({ code: 200, message: 'OK', data: req.user });
+    return res.status(200).json({ code: 200, message: "OK", data: req.user });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc verify token and send current user summary data
-// @route GET /auth/user/verify-token
+// @route GET /user/summary
 // @access Private
-export const getUserSummary = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const getUserSummary = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { user } = req;
 
     if (!user) {
-      return res.status(401).json(new HttpException(401, 'Unauthorized'));
+      return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
     const userSummary = {
@@ -230,27 +182,21 @@ export const getUserSummary = async (
       verified: user.verified,
     };
 
-    return res
-      .status(200)
-      .json({ code: 200, message: 'OK', data: userSummary });
+    return res.status(200).json({ code: 200, message: "OK", data: userSummary });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc get current user detail
-// @route GET /auth/user/detail
+// @route GET /user/detail
 // @access Private
-export const getCurrentUserDetail = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const getCurrentUserDetail = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { user } = req;
 
     if (!user) {
-      return res.status(401).json(new HttpException(401, 'Unauthorized'));
+      return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
     const userDetail = {
@@ -267,31 +213,27 @@ export const getCurrentUserDetail = async (
       deletedAt: user.deletedAt,
     };
 
-    return res.status(200).json({ code: 200, message: 'OK', data: userDetail });
+    return res.status(200).json({ code: 200, message: "OK", data: userDetail });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc Create new user
-// @route POST /auth/user/:id
+// @desc get user by id
+// @route GET /user/:id
 // @access Public
-export const getUserById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    const userFound = await user.findById(id).select('-password').lean().exec();
+    const userFound = await user.findById(id).select("-password").lean().exec();
 
     if (userFound) {
-      return res.status(200).json({ code: 200, message: 'OK', data: user });
+      return res.status(200).json({ code: 200, message: "OK", data: user });
     } else {
-      return res.status(404).json(new HttpException(404, 'User not found'));
+      return res.status(404).json(new HttpException(404, "User not found"));
     }
   } catch (error) {
     next(error);
@@ -299,22 +241,17 @@ export const getUserById = async (
 };
 
 // @desc edit user profile
-// @route POST /auth/user/edit/:id
+// @route PATCH /user/:id
 // @access Private
-export const userEdit = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const userEdit = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
     const userFound = await user.findById(id).exec();
 
-    if (!userFound)
-      return res.status(404).json(new HttpException(404, 'User not found'));
+    if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
     // profile information
     userFound.username = req.body.username || userFound.username;
@@ -356,18 +293,13 @@ export const userEdit = async (
 
     if (req.body.email) {
       if (req.body.email === userFound.email) {
-        return res.status(400).json(new HttpException(400, 'Email as same'));
+        return res.status(400).json(new HttpException(400, "Email as same"));
       }
 
       // check duplicated email
-      const duplicate = await user
-        .findOne({ email: req.body.email })
-        .lean()
-        .exec();
+      const duplicate = await user.findOne({ email: req.body.email }).lean().exec();
       if (duplicate) {
-        return res
-          .status(409)
-          .json(new HttpException(409, 'Email already exists'));
+        return res.status(409).json(new HttpException(409, "Email already exists"));
       }
 
       userFound.email = req.body.email;
@@ -384,36 +316,27 @@ export const userEdit = async (
 };
 
 // @desc upload avatar or banner
-// @route POST /auth/user/upload/:id/?type=:type
+// @route POST /user/upload/:id/?type=:type
 // @access Private
-export const uploadImage = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const uploadImage = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!id) return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    if (!req.query.type)
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (!req.query.type) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    if (req.query.type === 'avatar') {
+    if (req.query.type === "avatar") {
       const userFound = await user.findById(id).exec();
 
-      if (!userFound)
-        return res.status(404).json(new HttpException(404, 'User not found'));
+      if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-      const imagePath =
-        req.file?.path ||
-        req.protocol + '://' + req.get('host') + '/' + userFound.avatar;
+      const imagePath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.avatar;
 
       if (!imagePath) {
-        return res.status(400).json(new HttpException(400, 'Bad Request'));
+        return res.status(400).json(new HttpException(400, "Bad Request"));
       }
 
-      userFound.avatar =
-        req.protocol + '://' + req.get('host') + '/' + imagePath;
+      userFound.avatar = req.protocol + "://" + req.get("host") + "/" + imagePath;
 
       const updatedUser = await userFound.save();
 
@@ -422,22 +345,18 @@ export const uploadImage = async (
         message: `success update user ${updatedUser.email}`,
         data: updatedUser.avatar,
       });
-    } else if (req.query.type === 'banner') {
+    } else if (req.query.type === "banner") {
       const userFound = await user.findById(id).exec();
 
-      if (!userFound)
-        return res.status(404).json(new HttpException(404, 'User not found'));
+      if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-      const imagePath =
-        req.file?.path ||
-        req.protocol + '://' + req.get('host') + '/' + userFound.banner;
+      const imagePath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.banner;
 
       if (!imagePath) {
-        return res.status(400).json(new HttpException(400, 'Bad Request'));
+        return res.status(400).json(new HttpException(400, "Bad Request"));
       }
 
-      userFound.banner =
-        req.protocol + '://' + req.get('host') + '/' + imagePath;
+      userFound.banner = req.protocol + "://" + req.get("host") + "/" + imagePath;
 
       const updatedUser = await userFound.save();
 
@@ -448,30 +367,24 @@ export const uploadImage = async (
       });
     }
 
-    return res.status(400).json(new HttpException(400, 'Bad Request'));
+    return res.status(400).json(new HttpException(400, "Bad Request"));
   } catch (error) {
     next(error);
   }
 };
 
 // @desc delete user
-// @route POST /auth/user/delete/:id
+// @route DELETE /user/:id
 // @access Private
-export const userDelete = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const userDelete = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    if (isEmpty(id) || !id)
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (isEmpty(id) || !id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    const userFound = await user.findById(id).select('-password').exec();
+    const userFound = await user.findById(id).select("-password").exec();
 
-    if (isEmpty(userFound) || !userFound)
-      return res.status(404).json(new HttpException(404, 'User not found'));
+    if (isEmpty(userFound) || !userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
     const deletedUser = await userFound.deleteOne();
 
@@ -486,26 +399,20 @@ export const userDelete = async (
 };
 
 // @desc Verification user email
-// @route POST /auth/user/verify/:userId/:uniqueString
+// @route GET /user/verify/:userId/:uniqueString
 // @access Public
-export const verifyUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, uniqueString } = req.params;
     const linkVerified = `${CURRENT_URL}auth/user/verified/`;
 
     if (!userId || !uniqueString) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+      return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
     const findUserVerification = await UserVerificationModel.find({
       userId,
     }).exec();
-
-    console.log(findUserVerification);
 
     if (findUserVerification.length === 0) {
       return res.render(`pages/404`);
@@ -524,10 +431,7 @@ export const verifyUser = async (
       } else {
         // valid verify
         // compare hashed unique string
-        const compareUniqueString: boolean = await bcrypt.compare(
-          uniqueString,
-          hashedUniqueString
-        );
+        const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
 
         if (!compareUniqueString) {
           return res.render(`pages/404`);
@@ -552,13 +456,9 @@ export const verifyUser = async (
 };
 
 // @desc Success verification page
-// @route POST /auth/user/verified/:userId
+// @route GET /user/verified/:userId/:uniqueString
 // @access Public
-export const verifiedUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const verifiedUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = req.params;
     const { uniqueString } = req.params;
@@ -575,18 +475,14 @@ export const verifiedUser = async (
     }
 
     // check unique string
-    const hashedUniqueString = UserVerificationFound[0]?.uniqueString || 'null';
-    const compareUniqueString: boolean = await bcrypt.compare(
-      uniqueString,
-      hashedUniqueString
-    );
+    const hashedUniqueString = UserVerificationFound[0]?.uniqueString || "null";
+    const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
 
     if (!compareUniqueString || !userFound.verified || !hashedUniqueString) {
       return res.render(`pages/404`);
     }
 
     if (userFound.verified && UserVerificationFound.length > 0) {
-      console.log('verified');
       UserVerificationModel.deleteOne({ userId })
         .then(() => {
           return res.render(`pages/verifiedUser`);
@@ -603,30 +499,24 @@ export const verifiedUser = async (
 };
 
 // @desc Send email verification back
-// @route POST /auth/user/send/verification
+// @route POST /user/send/verification
 // @access Public
-export const sendVerification = async (
-  req: IRequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
+export const sendVerification = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+      return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
     const userFound = await user.findOne({ email }).lean().exec();
 
     if (!userFound) {
-      return res.status(404).json(new HttpException(404, 'User not found'));
+      return res.status(404).json(new HttpException(404, "User not found"));
     }
 
     if (userFound.verified) {
-      return res
-        .status(409)
-        .json(new HttpException(409, 'User already verified'));
+      return res.status(409).json(new HttpException(409, "User already verified"));
     }
 
     const userFoundVerification = await UserVerificationModel.find({
@@ -637,85 +527,68 @@ export const sendVerification = async (
       item.remove();
     });
 
-    return mailService.sendEmailVerification(
-      { _id: userFound._id, email },
-      res
-    );
+    return mailService.sendEmailVerification({ _id: userFound._id, email }, res);
   } catch (error) {
     next(error);
   }
 };
 
 // @desc Reset password
-// @route POST /auth/user/send/reset-password
+// @route POST /user/send/reset-password
 // @access Public
-export const requestResetPassword = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const requestResetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+      return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
     const userFound = await user.findOne({ email }).exec();
 
     if (!userFound) {
-      return res.status(404).json(new HttpException(404, 'User not found'));
+      return res.status(404).json(new HttpException(404, "User not found"));
     }
 
     if (!userFound.verified) {
-      return res.status(409).json(new HttpException(409, 'User not verified'));
+      return res.status(409).json(new HttpException(409, "User not verified"));
     }
 
     const findUserResetPassword = await UserResetPasswordModel.findOne({
       userId: userFound._id,
     });
 
-    if (
-      findUserResetPassword ||
-      findUserResetPassword?.expiresAt > new Date()
-    ) {
+    if (findUserResetPassword || findUserResetPassword?.expiresAt > new Date()) {
       findUserResetPassword.remove();
     }
 
     // send email reset password
-    return mailService.sendEmailResetPassword(
-      { _id: userFound._id, email },
-      res
-    );
+    return mailService.sendEmailResetPassword({ _id: userFound._id, email }, res);
   } catch (error) {
     next(error);
   }
 };
 
 // @desc Reset password
-// @route POST /auth/user/reset/password/:userId/:uniqueString
+// @route POST /user/reset/password/:userId/:uniqueString
 // @access Private
-export const resetPassword = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, uniqueString } = req.params;
     const { password } = req.body;
 
     if (!userId || !uniqueString || !password) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+      return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
     const userFound = await user.findById(userId).exec();
 
     if (!userFound) {
-      return res.status(404).json(new HttpException(404, 'User not found'));
+      return res.status(404).json(new HttpException(404, "User not found"));
     }
 
     if (!userFound.verified) {
-      return res.status(409).json(new HttpException(409, 'User not verified'));
+      return res.status(409).json(new HttpException(409, "User not verified"));
     }
 
     const findUserResetPassword = await UserResetPasswordModel.findOne({
@@ -723,21 +596,14 @@ export const resetPassword = async (
     });
 
     if (!findUserResetPassword) {
-      return res
-        .status(404)
-        .json(new HttpException(404, 'Invalid Link or Expired'));
+      return res.status(404).json(new HttpException(404, "Invalid Link or Expired"));
     }
 
     const hashedUniqueString = findUserResetPassword.uniqueString;
-    const compareUniqueString: boolean = await bcrypt.compare(
-      uniqueString,
-      hashedUniqueString
-    );
+    const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
 
     if (!compareUniqueString) {
-      return res
-        .status(404)
-        .json(new HttpException(404, 'Invalid Link or Expired'));
+      return res.status(404).json(new HttpException(404, "Invalid Link or Expired"));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -746,14 +612,10 @@ export const resetPassword = async (
       .updateOne({ _id: userId }, { password: hashedPassword })
       .then(() => {
         findUserResetPassword.remove();
-        return res
-          .status(200)
-          .json(new HttpException(200, 'Password success updated'));
+        return res.status(200).json(new HttpException(200, "Password success updated"));
       })
       .catch(() => {
-        return res
-          .status(500)
-          .json(new HttpException(500, 'Internal Server Error'));
+        return res.status(500).json(new HttpException(500, "Internal Server Error"));
       });
   } catch (error) {
     next(error);
