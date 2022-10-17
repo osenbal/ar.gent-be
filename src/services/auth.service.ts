@@ -96,6 +96,8 @@ class AuthService {
     const secretKey: string = REFRESH_TOKEN_SECRET;
     const { _id } = jwt.verify(refreshToken, secretKey) as IDataStoredInToken;
 
+    if (!_id) throw new HttpException(400, "Unauthorized");
+
     const user = await this.user.findById(_id).exec();
     if (!user) throw new HttpException(409, "User not found");
 
@@ -149,6 +151,11 @@ class AuthService {
 
   public createCookie(accessToken: ITokenData): string {
     return `Authorization=${accessToken.token}; HttpOnly; secure; Max-Age=${accessToken.expiresIn};`;
+  }
+
+  public verifyAccessToken(token: string): IDataStoredInToken {
+    const secretKey: string = ACCESS_TOKEN_SECRET;
+    return jwt.verify(token, secretKey) as IDataStoredInToken;
   }
 }
 

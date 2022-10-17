@@ -61,7 +61,6 @@ describe("Test request with mongoose", () => {
         .field("birthday", newUser.birthday)
         .field("gender", newUser.gender)
         .attach("avatar", filePath);
-      // console.log(res.body);
       expect(res.statusCode).toBe(201);
     }
   });
@@ -90,7 +89,6 @@ describe("Test request with mongoose", () => {
         .field("zipCode", newUser.zipCode)
         .field("birthday", newUser.birthday)
         .field("gender", newUser.gender);
-      console.log(res.body);
       expect(res.statusCode).toBe(400);
     }
   });

@@ -8,9 +8,6 @@ import { ACCESS_TOKEN_SECRET } from "@config/config";
 
 const authMiddleware = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    // const Authorization = req.header('Authorization')
-    //   ? req.header('Authorization').split('Bearer ')[1]
-    //   : null;
     const { Authorization } = req.cookies;
 
     if (Authorization) {

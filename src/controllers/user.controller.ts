@@ -166,7 +166,6 @@ export const getUserSummary = async (req: IRequestWithUser, res: Response, next:
     if (!user) {
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
-
     const userSummary = {
       _id: user._id,
       avatar: user.avatar,

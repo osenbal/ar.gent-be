@@ -17,6 +17,7 @@ class UserRoute implements Routes {
     this.router.route(`${this.path}`).post(uploadStorage("profile", filterImage).single("avatar"), userController.signUp);
 
     this.router.route(`${this.path}`).get(authMiddleware, userController.getCurrentUser);
+    this.router.route(`${this.path}summary`).get(authMiddleware, userController.getUserSummary);
 
     this.router.route(`${this.path}:id`).get(userController.getUserById);
 
@@ -28,22 +29,18 @@ class UserRoute implements Routes {
       .route(`${this.path}upload/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile", filterImage).single("image"), userController.uploadImage);
 
-    this.router.route(`${this.path}summary`).get(authMiddleware, userController.getUserSummary);
-
     this.router.route(`${this.path}detail`).get(userController.getCurrentUserDetail);
 
     this.router.route(`${this.path}admin-create`).post(authMiddleware, authRoleMiddleware("admin"), userController.adminCreate);
 
     this.router.route(`${this.path}all`).get(authMiddleware, authRoleMiddleware("admin"), userController.getAllUser);
 
-    // email verification
     this.router.route(`${this.path}send/verification`).get(authMiddleware, authPolicyMiddleware, userController.sendVerification);
 
     this.router.route(`${this.path}verify/:userId/:uniqueString`).get(userController.verifyUser);
 
     this.router.route(`${this.path}verified/:userId/:uniqueString`).get(userController.verifiedUser);
 
-    // password reset
     this.router.route(`${this.path}send/reset-password`).post(userController.requestResetPassword);
 
     this.router.route(`${this.path}reset/password/:userId/:uniqueString`).post(userController.resetPassword);
