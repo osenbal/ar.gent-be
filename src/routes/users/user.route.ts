@@ -17,9 +17,8 @@ class UserRoute implements Routes {
     this.router.route(`${this.path}`).post(uploadStorage("profile", filterImage).single("avatar"), userController.signUp);
 
     this.router.route(`${this.path}`).get(authMiddleware, userController.getCurrentUser);
-    this.router.route(`${this.path}summary`).get(authMiddleware, userController.getUserSummary);
 
-    this.router.route(`${this.path}:id`).get(userController.getUserById);
+    this.router.route(`${this.path}:id`).get(authMiddleware, userController.getUserById);
 
     this.router.route(`${this.path}:id`).patch(authMiddleware, authPolicyMiddleware, userController.userEdit);
 
@@ -28,8 +27,6 @@ class UserRoute implements Routes {
     this.router
       .route(`${this.path}upload/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile", filterImage).single("image"), userController.uploadImage);
-
-    this.router.route(`${this.path}detail`).get(userController.getCurrentUserDetail);
 
     this.router.route(`${this.path}admin-create`).post(authMiddleware, authRoleMiddleware("admin"), userController.adminCreate);
 

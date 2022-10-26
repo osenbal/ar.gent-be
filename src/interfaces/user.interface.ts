@@ -1,14 +1,14 @@
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
 export enum EGender {
-  MALE = 'male',
-  FEMALE = 'female',
-  OTHER = 'other',
+  MALE = "male",
+  FEMALE = "female",
+  OTHER = "other",
 }
 
 export enum ERole {
-  ADMIN = 'admin',
-  USER = 'user',
+  ADMIN = "admin",
+  USER = "user",
 }
 
 export interface IAddress {
@@ -55,7 +55,6 @@ export interface IUserRegister {
   phoneNumber: string;
   gender: EGender;
   birthday: Date;
-  address: IAddress;
   email: string;
   password: string;
 }

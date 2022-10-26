@@ -49,7 +49,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
         if (!userFound) throw new HttpException(404, "User not found");
 
-        return res.status(200).json({ code: 200, message: "OK", data: { Authorization, accessToken: req.cookies?.refreshToken } });
+        return res.status(200).json({ code: 200, message: "OK", data: { _id } });
       }
     }
 
@@ -58,7 +58,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     }
 
     const refreshToken = cookies.refreshToken;
-    console.log("refresh: ", refreshToken);
 
     const { refreshTokenData, accessToken } = await authService.refresh(refreshToken);
 

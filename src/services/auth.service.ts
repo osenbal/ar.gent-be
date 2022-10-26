@@ -6,7 +6,7 @@ import IUser, { IAddress, IUserRegister } from "@interfaces/user.interface";
 import { ITokenData, IDataStoredInToken } from "@interfaces/auth.interface";
 import { isEmpty } from "@utils/util";
 import { HttpException } from "@/exceptions/HttpException";
-import { Request } from "express";
+// import { Request } from "express";
 
 class AuthService {
   public user = UserModel;
@@ -15,22 +15,9 @@ class AuthService {
     if (isEmpty(newUser)) throw new HttpException(400, "Bad request");
     if (isEmpty(avatar)) throw new HttpException(400, "Bad request");
 
-    const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = newUser;
+    const { username, fullName, gender, email, password, phoneNumber, birthday } = newUser;
 
-    if (
-      !username ||
-      !email ||
-      !password ||
-      !fullName ||
-      !gender ||
-      !phoneNumber ||
-      !avatar ||
-      !birthday ||
-      !street ||
-      !city ||
-      !country ||
-      !zipCode
-    ) {
+    if (!username || !email || !password || !fullName || !gender || !phoneNumber || !avatar || !birthday) {
       throw new HttpException(400, "Bad request");
     }
 
@@ -51,13 +38,6 @@ class AuthService {
 
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
 
-    const addressUser: IAddress = {
-      street: newUser.street,
-      city: newUser.city,
-      country: newUser.country,
-      zipCode: newUser.zipCode,
-    };
-
     const newUserObject: IUserRegister = {
       avatar: req.protocol + "://" + req.get("host") + "/" + avatar,
       username: newUser.username,
@@ -65,7 +45,6 @@ class AuthService {
       phoneNumber: newUser.phoneNumber,
       gender: newUser.gender,
       birthday: new Date(newUser.birthday),
-      address: addressUser,
       email: newUser.email,
       password: hashedPassword,
     };

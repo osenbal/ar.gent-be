@@ -1,18 +1,12 @@
-import IUser, {
-  EGender,
-  IAddress,
-  IExperience,
-  IEducation,
-  ICertificate,
-} from '@interfaces/user.interface';
-import { model, Schema } from 'mongoose';
-import { ROLE_USER } from '@config/constant/constant';
-import { CURRENT_URL } from '@/config/config';
+import IUser, { EGender, IAddress, IExperience, IEducation, ICertificate } from "@interfaces/user.interface";
+import { model, Schema } from "mongoose";
+import { ROLE_USER } from "@config/constant/constant";
+import { CURRENT_URL } from "@/config/config";
 
 const UserSchema = new Schema<IUser>({
   banner: {
     type: String,
-    default: `${CURRENT_URL}public/defaults/profile/banner_default.jpg`,
+    default: `${CURRENT_URL}public/defaults/profile/default_banner.jpg`,
   },
   avatar: {
     type: String,
@@ -42,13 +36,18 @@ const UserSchema = new Schema<IUser>({
   },
   about: {
     type: String,
-    default: 'Hi there! I am using ar.gent.',
+    default: "Hi there! I am using ar.gent.",
   },
   birthday: {
     type: Date,
     required: true,
   },
   address: {
+    default: {
+      street: "",
+      city: "",
+      country: "",
+    },
     type: Object as () => IAddress,
     required: true,
   },
@@ -63,7 +62,7 @@ const UserSchema = new Schema<IUser>({
   },
   cv: {
     type: String,
-    default: '',
+    default: "",
   },
   skill: {
     type: [String],
@@ -103,6 +102,6 @@ const UserSchema = new Schema<IUser>({
   },
 });
 
-const UserModel = model<IUser>('User', UserSchema);
+const UserModel = model<IUser>("User", UserSchema);
 
 export default UserModel;

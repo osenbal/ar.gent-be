@@ -156,72 +156,10 @@ export const getCurrentUser = (req: IRequestWithUser, res: Response, next: NextF
   }
 };
 
-// @desc verify token and send current user summary data
-// @route GET /user/summary
-// @access Private
-export const getUserSummary = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-  try {
-    const { user } = req;
-
-    if (!user) {
-      return res.status(401).json(new HttpException(401, "Unauthorized"));
-    }
-    const userSummary = {
-      _id: user._id,
-      avatar: user.avatar,
-      banner: user.banner,
-      username: user.username,
-      email: user.email,
-      fullName: user.fullName,
-      phoneNumber: user.phoneNumber,
-      gender: user.gender,
-      birthday: user.birthday,
-      role: user.role,
-      about: user.about,
-      verified: user.verified,
-    };
-
-    return res.status(200).json({ code: 200, message: "OK", data: userSummary });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc get current user detail
-// @route GET /user/detail
-// @access Private
-export const getCurrentUserDetail = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-  try {
-    const { user } = req;
-
-    if (!user) {
-      return res.status(401).json(new HttpException(401, "Unauthorized"));
-    }
-
-    const userDetail = {
-      userId: user._id,
-      address: user.address,
-      experience: user.experience,
-      education: user.education,
-      skill: user.skill,
-      cv: user.cv,
-      portfolioUrl: user.portfolio_url,
-      certificate: user.certificate,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      deletedAt: user.deletedAt,
-    };
-
-    return res.status(200).json({ code: 200, message: "OK", data: userDetail });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // @desc get user by id
 // @route GET /user/:id
 // @access Public
-export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -230,7 +168,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
     const userFound = await user.findById(id).select("-password").lean().exec();
 
     if (userFound) {
-      return res.status(200).json({ code: 200, message: "OK", data: user });
+      return res.status(200).json({ code: 200, message: "OK", data: userFound });
     } else {
       return res.status(404).json(new HttpException(404, "User not found"));
     }
