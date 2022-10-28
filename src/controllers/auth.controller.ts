@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import AuthService from "@services/auth.service";
 import { HttpException } from "@exceptions/HttpException";
-import { IRequestWithUser } from "@interfaces/auth.interface";
+import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
 import UserModel from "@/models/User/User.model";
+import jwt from "jsonwebtoken";
 
 //  @desc initialized object AuthService
 const authService = new AuthService();
@@ -73,7 +74,10 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       maxAge: refreshTokenData.expiresIn,
     });
 
-    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshToken } });
+    // get id from access token
+    const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
+
+    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshToken, _id } });
   } catch (error) {
     next(error);
   }
