@@ -190,9 +190,10 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
+    console.log(req.body);
     // profile information
     userFound.username = req.body.username || userFound.username;
-    userFound.fullName = req.body.lastName || userFound.fullName;
+    userFound.fullName = req.body.fullName || userFound.fullName;
     userFound.about = req.body.about || userFound.about;
     userFound.phoneNumber = req.body.phoneNumber || userFound.phoneNumber;
     userFound.gender = req.body.gender || userFound.gender;

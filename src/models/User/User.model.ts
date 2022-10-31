@@ -46,7 +46,9 @@ const UserSchema = new Schema<IUser>({
     default: {
       street: "",
       city: "",
+      state: "",
       country: "",
+      zipCode: null,
     },
     type: Object as () => IAddress,
     required: true,

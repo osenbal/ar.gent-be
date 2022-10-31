@@ -14,8 +14,9 @@ export enum ERole {
 export interface IAddress {
   street: string;
   city: string;
+  state: string;
   country: string;
-  zipCode: number;
+  zipCode: number | null;
 }
 
 export interface IEducation {
