@@ -116,7 +116,8 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
       });
 
       // send email verification
-      return mailService.sendEmailVerification(newUser, res);
+      // return mailService.sendEmailVerification(newUser, res);
+      return res.status(200).json({userId: newUser._id});
     } else {
       return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
