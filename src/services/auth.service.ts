@@ -54,7 +54,7 @@ class AuthService {
     return createUserData;
   }
 
-  public async login(userData): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+  public async login(userData): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData; userId: string }> {
     if (isEmpty(userData)) throw new HttpException(400, "Unauthorized");
 
     const foundUser: IUser = await this.user.findOne({ email: userData.email }).exec();
@@ -66,7 +66,7 @@ class AuthService {
     const accessToken = this.createToken(foundUser);
     const refreshTokenData = this.createRefreshToken(foundUser);
 
-    return { refreshTokenData, accessToken };
+    return { refreshTokenData, accessToken, userId: foundUser._id.toString() };
   }
 
   public async refresh(refreshToken: string): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {

@@ -116,8 +116,8 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
       });
 
       // send email verification
-      // return mailService.sendEmailVerification(newUser, res);
-      return res.status(200).json({userId: newUser._id});
+      return mailService.sendEmailVerification(newUser, res);
+      // return res.status(200).json({userId: newUser._id});
     } else {
       return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
@@ -191,7 +191,6 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-    console.log(req.body);
     // profile information
     userFound.username = req.body.username || userFound.username;
     userFound.fullName = req.body.fullName || userFound.fullName;
@@ -203,8 +202,11 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
     // address
     userFound.address.street = req.body.street || userFound.address.street;
     userFound.address.city = req.body.city || userFound.address.city;
+    userFound.address.state = req.body.state || userFound.address.state;
     userFound.address.country = req.body.country || userFound.address.country;
     userFound.address.zipCode = req.body.zipCode || userFound.address.zipCode;
+
+    console.log("== user address == ", userFound.address);
 
     // portfolio and etc
     if (req.body.portfolio_url) {
@@ -244,7 +246,8 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
       userFound.email = req.body.email;
     }
 
-    const updatedUser = await userFound.save();
+    const updatedUser = await userFound.update(userFound).exec();
+    console.log("== updated user == ", updatedUser);
     return res.status(200).json({
       code: 200,
       message: `success update user ${updatedUser.email}`,

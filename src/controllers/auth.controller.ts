@@ -14,7 +14,7 @@ const authService = new AuthService();
 export const logIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userData = req.body;
-    const { refreshTokenData, accessToken } = await authService.login(userData);
+    const { refreshTokenData, accessToken, userId } = await authService.login(userData);
 
     res.cookie("Authorization", accessToken.token, {
       httpOnly: true,
@@ -26,7 +26,7 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
       maxAge: refreshTokenData.expiresIn,
     });
 
-    res.status(200).json({ code: 200, message: "OK", data: { refreshTokenData } });
+    res.status(200).json({ code: 200, message: "OK", data: { userId } });
   } catch (error) {
     next(error);
   }
