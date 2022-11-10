@@ -263,6 +263,7 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 export const uploadImage = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    console.log(req.file);
     if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
     if (!req.query.type) return res.status(400).json(new HttpException(400, "Bad Request"));

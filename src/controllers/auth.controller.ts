@@ -89,7 +89,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 export const logout = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const cookies = req.cookies;
-    if (!cookies?.Authorization) return res.status(204).json({ code: 204, message: "No Content" });
+    if (!cookies?.Authorization) return res.status(204).json({ code: 204, message: "No Auth Token" });
 
     res.clearCookie("Authorization", {
       httpOnly: true,
@@ -97,7 +97,13 @@ export const logout = async (req: IRequestWithUser, res: Response, next: NextFun
       sameSite: "none",
     });
 
-    res.status(200).json({ code: 200, message: "Cookie Cleared" });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
+    return res.status(200).json({ code: 200, message: "Cookie Cleared" });
   } catch (error) {
     next(error);
   }
