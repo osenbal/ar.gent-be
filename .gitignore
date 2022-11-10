@@ -6,6 +6,9 @@ dist
 production
 build
 build/release
+public/uploads/job/*
+public/uploads/profile/*
+
 
 # Cache
 cache
