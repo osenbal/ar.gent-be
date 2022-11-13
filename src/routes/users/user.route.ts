@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { Routes } from "@interfaces/routes.interface";
 import authMiddleware from "@middlewares/auth.middleware";
-import uploadStorage, { filterImage } from "@middlewares/storage.middleware";
+import uploadStorage, { filterImage, filterPdf } from "@middlewares/storage.middleware";
 import * as userController from "@controllers/user.controller";
 import { authPolicyMiddleware, authRoleAndPolicyMiddleware, authRoleMiddleware } from "@middlewares/authRole.middleware";
 
@@ -27,6 +27,10 @@ class UserRoute implements Routes {
     this.router
       .route(`${this.path}upload/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile", filterImage).single("image"), userController.uploadImage);
+
+    this.router
+      .route(`${this.path}uploadfile/:id`)
+      .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/cv", filterPdf).single("cv"), userController.uploadFile);
 
     this.router.route(`${this.path}admin-create`).post(authMiddleware, authRoleMiddleware("admin"), userController.adminCreate);
 

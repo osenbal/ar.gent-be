@@ -82,7 +82,7 @@ const UserSchema = new Schema<IUser>({
     type: [Object as () => ICertificate],
     default: [],
   },
-  portfolio_url: {
+  portfolioUrl: {
     type: [String],
     default: [],
   },

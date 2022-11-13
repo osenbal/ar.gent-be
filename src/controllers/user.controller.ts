@@ -201,17 +201,17 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     // address
     userFound.address.street = req.body.street || userFound.address.street;
-    userFound.address.city = req.body.city || userFound.address.city;
-    userFound.address.state = req.body.state || userFound.address.state;
-    userFound.address.country = req.body.country || userFound.address.country;
+    userFound.address.city = req.body.city;
+    userFound.address.state = req.body.state;
+    userFound.address.country = req.body.country;
     userFound.address.zipCode = req.body.zipCode || userFound.address.zipCode;
 
-    console.log("== user address == ", userFound.address);
+    console.log("== req body == ", req.body);
 
     // portfolio and etc
-    if (req.body.portfolio_url) {
-      const newPortfolio: string[] = req.body.portfolio_url;
-      userFound.portfolio_url = newPortfolio;
+    if (req.body.portfolioUrl) {
+      const newPortfolio: string[] = req.body.portfolioUrl;
+      userFound.portfolioUrl = newPortfolio;
     }
     if (req.body.skill) {
       const newSkill: string[] = req.body.skill;
@@ -250,7 +250,7 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
     console.log("== updated user == ", updatedUser);
     return res.status(200).json({
       code: 200,
-      message: `success update user ${updatedUser.email}`,
+      message: `success update profile`,
     });
   } catch (error) {
     next(error);
@@ -263,7 +263,6 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 export const uploadImage = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    console.log(req.file);
     if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
     if (!req.query.type) return res.status(400).json(new HttpException(400, "Bad Request"));
@@ -307,6 +306,43 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
         code: 200,
         message: `success update user ${updatedUser.email}`,
         data: updatedUser.banner,
+      });
+    }
+
+    return res.status(400).json(new HttpException(400, "Bad Request"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadFile = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
+
+    if (!req.query.type) return res.status(400).json(new HttpException(400, "Bad Request"));
+
+    const userFound = await user.findById(id).exec();
+
+    if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
+
+    if (req.query.type === "cv") {
+      console.log("== req file == ", req.file);
+      const cvPath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.cv;
+
+      console.log("== cv path == ", cvPath);
+      if (!cvPath) {
+        return res.status(400).json(new HttpException(400, "Bad Request"));
+      }
+
+      userFound.cv = req.protocol + "://" + req.get("host") + "/" + cvPath;
+
+      const updatedUser = await userFound.save();
+
+      return res.status(200).json({
+        code: 200,
+        message: `success update user ${updatedUser.email}`,
+        data: updatedUser.cv,
       });
     }
 

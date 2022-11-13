@@ -25,7 +25,7 @@ export interface IEducation {
   location: string;
   startDate: Date;
   endDate: Date | null;
-  description: string;
+  currentEducation: boolean;
 }
 
 export interface IExperience {
@@ -79,7 +79,7 @@ export default interface IUser {
   education: IEducation[];
   experience: IExperience[];
   certificate: ICertificate[];
-  portfolio_url: string[];
+  portfolioUrl: string[];
   verified: boolean; // required
   createdAt: Date; // required
   updatedAt: Date | null;
