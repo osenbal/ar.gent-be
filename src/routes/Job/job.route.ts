@@ -1,10 +1,11 @@
-import { Router } from 'express';
-import { Routes } from '@interfaces/routes.interface';
-import { createJob, getAllJob } from '@controllers/job.controller';
-// import uploadStorage, { filterImage } from '@middlewares/storage.middleware';
+import { Router } from "express";
+import { Routes } from "@interfaces/routes.interface";
+import { createJob, getAllJob, getJobByUserId, getJobById, updateJob, deleteJobById } from "@controllers/job.controller";
+import { authPolicyMiddleware, authRoleAndPolicyMiddleware, authRoleMiddleware } from "@middlewares/authRole.middleware";
+import authMiddleware from "@middlewares/auth.middleware";
 
 class JobRoute implements Routes {
-  public path = '/job/';
+  public path = "/job/";
   public router = Router();
 
   constructor() {
@@ -12,10 +13,16 @@ class JobRoute implements Routes {
   }
 
   private initializeRoutes() {
-    // this.router.route(`${this.path}all`).get(getAllJob);
-    // this.router
-    //   .route(`${this.path}create`)
-    //   .post(uploadStorage('job', 'image', filterImage), createJob);
+    this.router.route(`${this.path}`).get(getAllJob);
+    this.router.route(`${this.path}`).post(authMiddleware, createJob);
+
+    this.router.route(`${this.path}id/:jobId`).get(getJobById);
+
+    this.router.route(`${this.path}:userId`).get(authMiddleware, getJobByUserId);
+
+    this.router.route(`${this.path}:jobId`).patch(authMiddleware, updateJob);
+
+    this.router.route(`${this.path}:jobId`).delete(authMiddleware, deleteJobById);
   }
 }
 

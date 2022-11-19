@@ -1,74 +1,145 @@
-import { Request, Response, NextFunction } from 'express';
-import JobModel from '@models/Job.model';
-import { HttpException } from '@/exceptions/HttpException';
+import { Request, Response, NextFunction } from "express";
+import JobModel from "@models/Job.model";
+import UserModel from "@/models/User/User.model";
+import { HttpException } from "@/exceptions/HttpException";
+import { IRequestWithUser } from "@/interfaces/auth.interface";
+import IUser from "@/interfaces/user.interface";
 
 const job = JobModel;
+const user = UserModel;
 
-const createJob = async (req: Request, res: Response, next: NextFunction) => {
+export const createJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const {
-      userId,
-      emailUser,
-      title,
-      description,
-      category,
-      salary,
-      created_at,
-      deleted_at,
-    } = req.body;
+    const { title, description, type, level, workPlace, location, salary } = req.body;
 
-    const image = req.file.path;
+    const userId = req.user._id;
 
-    if (
-      !userId ||
-      !emailUser ||
-      !image ||
-      !title ||
-      !description ||
-      !category ||
-      !salary ||
-      !created_at ||
-      !deleted_at
-    ) {
-      return res.status(400).json(new HttpException(400, 'Bad Request'));
+    if (!title || !description || !type || !level || !workPlace || !location || !salary || !userId) {
+      return res.status(400).json(new HttpException(400, "Bad Request"));
+    }
+
+    const userFound = await user.findById(userId).lean();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, "User not found"));
     }
 
     const jobObject = {
       userId,
-      emailUser,
-      image,
+      username: userFound.username,
       title,
       description,
-      category,
+      type,
+      level,
+      workPlace,
+      location,
       salary,
-      created_at,
-      deleted_at,
     };
 
     const newJob = await job.create(jobObject);
 
     if (newJob) {
-      return res
-        .status(201)
-        .json({ code: 201, message: 'Created', data: newJob });
+      return res.status(201).json({ code: 201, message: "Created", data: newJob });
     } else {
-      return res
-        .status(400)
-        .json(new HttpException(400, 'Invalid job data received'));
+      return res.status(400).json(new HttpException(400, "Invalid job data received"));
     }
   } catch (error) {
     next(error);
   }
 };
 
-const getAllJob = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllJob = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const jobs = await job.find().lean();
-
-    return res.status(200).json({ code: 200, message: 'OK', data: jobs });
+    return res.status(200).json({ code: 200, message: "OK", data: jobs });
   } catch (error) {
     next(error);
   }
 };
 
-export { createJob, getAllJob };
+export const getJobByUserId = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.params.userId;
+    const jobs = await job.find({ userId }).lean();
+    return res.status(200).json({ code: 200, message: "OK", data: jobs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getJobById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    const { userId } = jobFound;
+    const dataUser: IUser = await user.findOne({ _id: userId }).lean();
+
+    return res.status(200).json({ code: 200, message: "OK", data: { ...jobFound, avatarUser: dataUser.avatar } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+    const { userId } = jobFound;
+    if (userId.toString() !== req.user._id.toString()) {
+      return res.status(401).json(new HttpException(401, "Unauthorized tet"));
+    }
+
+    const { title, description, type, level, workPlace, location, salary } = req.body;
+
+    const jobObject = {
+      title,
+      description,
+      type,
+      level,
+      workPlace,
+      location,
+      salary,
+    };
+
+    const updatedJob = await job.findOne({ _id: jobId }).updateOne(jobObject);
+
+    if (updatedJob) {
+      return res.status(200).json({ code: 200, message: "OK", data: "success update" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteJobById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    const { userId } = jobFound;
+    if (userId.toString() !== req.user._id.toString()) {
+      return res.status(401).json(new HttpException(401, "Unauthorized tet"));
+    }
+
+    const deletedJob = await job.findOne({ _id: jobId }).deleteOne();
+
+    if (deletedJob) {
+      return res.status(200).json({ code: 200, message: "OK", data: "success delete" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
