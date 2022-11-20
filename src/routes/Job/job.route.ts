@@ -13,7 +13,7 @@ class JobRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router.route(`${this.path}`).get(authMiddleware, getAllJob);
+    this.router.route(`${this.path}`).get(getAllJob);
     this.router.route(`${this.path}`).post(authMiddleware, createJob);
 
     this.router.route(`${this.path}id/:jobId`).get(getJobById);

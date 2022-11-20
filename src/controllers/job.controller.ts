@@ -48,7 +48,7 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
   }
 };
 
-export const getAllJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+export const getAllJob = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (req.query.page && req.query.limit) {
       const { page, limit } = req.query;
