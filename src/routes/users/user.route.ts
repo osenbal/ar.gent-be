@@ -26,7 +26,7 @@ class UserRoute implements Routes {
 
     this.router
       .route(`${this.path}upload/:id`)
-      .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile", filterImage).single("image"), userController.uploadImage);
+      .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/avatar", filterImage).single("image"), userController.uploadImage);
 
     this.router
       .route(`${this.path}uploadfile/:id`)
