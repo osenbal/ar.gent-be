@@ -109,6 +109,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
       res.cookie("Authorization", accessToken.token, {
         secure: true,
         httpOnly: true,
+        sameSite: "none",
         maxAge: accessToken.expiresIn,
       });
       res.cookie("refreshToken", refreshToken.token, {
