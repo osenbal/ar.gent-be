@@ -19,14 +19,12 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
     res.cookie("Authorization", accessToken.token, {
       secure: true,
       httpOnly: true,
-      domain: process.env.ORIGIN,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
       secure: true,
       httpOnly: true,
-      domain: process.env.ORIGIN,
       maxAge: refreshTokenData.expiresIn,
     });
 
@@ -69,14 +67,12 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     res.cookie("Authorization", accessToken.token, {
       secure: true,
       httpOnly: true,
-      domain: process.env.ORIGIN,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
       secure: true,
       httpOnly: true,
-      domain: process.env.ORIGIN,
       maxAge: refreshTokenData.expiresIn,
     });
 
@@ -100,14 +96,12 @@ export const logout = async (req: IRequestWithUser, res: Response, next: NextFun
     res.clearCookie("Authorization", {
       secure: true,
       httpOnly: true,
-      domain: process.env.ORIGIN,
       sameSite: "none",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: true,
-      domain: process.env.ORIGIN,
       sameSite: "none",
     });
 
