@@ -107,13 +107,13 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
       // set cookie auth token
       res.cookie("Authorization", accessToken.token, {
-        httpOnly: true,
         secure: true,
+        httpOnly: true,
         maxAge: accessToken.expiresIn,
       });
       res.cookie("refreshToken", refreshToken.token, {
-        httpOnly: true,
         secure: true,
+        httpOnly: true,
         maxAge: refreshToken.expiresIn,
       });
 

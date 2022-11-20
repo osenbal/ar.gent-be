@@ -17,14 +17,14 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
     const { refreshTokenData, accessToken, userId } = await authService.login(userData);
 
     res.cookie("Authorization", accessToken.token, {
-      httpOnly: true,
       secure: true,
+      httpOnly: true,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
-      httpOnly: true,
       secure: true,
+      httpOnly: true,
       maxAge: refreshTokenData.expiresIn,
     });
 
@@ -57,7 +57,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     }
 
     if (!cookies?.refreshToken) {
-      return res.status(401).json(new HttpException(401, "Unauthorized"));
+      return res.status(401).json({ code: 401, message: "Unauthorized" });
     }
 
     const refreshToken = cookies.refreshToken;
@@ -65,14 +65,14 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     const { refreshTokenData, accessToken } = await authService.refresh(refreshToken);
 
     res.cookie("Authorization", accessToken.token, {
-      httpOnly: true,
       secure: true,
+      httpOnly: true,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
-      httpOnly: true,
       secure: true,
+      httpOnly: true,
       maxAge: refreshTokenData.expiresIn,
     });
 
@@ -94,8 +94,8 @@ export const logout = async (req: IRequestWithUser, res: Response, next: NextFun
     if (!cookies?.Authorization) return res.status(204).json({ code: 204, message: "No Auth Token" });
 
     res.clearCookie("Authorization", {
-      httpOnly: true,
       secure: true,
+      httpOnly: true,
       sameSite: "none",
     });
 
