@@ -109,11 +109,13 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
       res.cookie("Authorization", accessToken.token, {
         secure: true,
         httpOnly: true,
+        domain: process.env.ORIGIN,
         maxAge: accessToken.expiresIn,
       });
       res.cookie("refreshToken", refreshToken.token, {
         secure: true,
         httpOnly: true,
+        domain: process.env.ORIGIN,
         maxAge: refreshToken.expiresIn,
       });
 
