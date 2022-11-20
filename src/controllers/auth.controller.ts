@@ -18,11 +18,13 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
 
     res.cookie("Authorization", accessToken.token, {
       httpOnly: true,
+      secure: true,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
       httpOnly: true,
+      secure: true,
       maxAge: refreshTokenData.expiresIn,
     });
 
@@ -64,13 +66,13 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     res.cookie("Authorization", accessToken.token, {
       httpOnly: true,
-      // secure: true,
+      secure: true,
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
       httpOnly: true,
-      // secure: true,
+      secure: true,
       maxAge: refreshTokenData.expiresIn,
     });
 
