@@ -48,10 +48,32 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
   }
 };
 
-export const getAllJob = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const jobs = await job.find().lean();
-    return res.status(200).json({ code: 200, message: "OK", data: jobs });
+    if (req.query.page && req.query.limit) {
+      const { page, limit } = req.query;
+
+      const jobs = await job
+        .find()
+        .skip((Number(page) - 1) * Number(limit))
+        .limit(Number(limit))
+        .lean();
+
+      if (jobs) {
+        const total = await job.countDocuments();
+        return res.status(200).json({ code: 200, message: "OK", data: jobs, total });
+      } else {
+        return res.status(404).json(new HttpException(404, "Jobs not found"));
+      }
+    } else {
+      const jobs = await job.find().lean();
+
+      if (jobs) {
+        return res.status(200).json({ code: 200, message: "OK", data: jobs });
+      } else {
+        return res.status(404).json(new HttpException(404, "No job found"));
+      }
+    }
   } catch (error) {
     next(error);
   }
