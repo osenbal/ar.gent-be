@@ -63,7 +63,7 @@ export const getAllJob = async (req: IRequestWithUser, res: Response, next: Next
         const total = await job.countDocuments();
         return res.status(200).json({ code: 200, message: "OK", data: jobs, total });
       } else {
-        return res.status(404).json(new HttpException(404, "Jobs not found"));
+        return res.status(404).json(new HttpException(404, "No job found"));
       }
     } else {
       const jobs = await job.find().lean();
