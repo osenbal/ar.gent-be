@@ -15,84 +15,6 @@ const authService = new AuthService();
 const user = UserModel;
 const mailService = new MailService();
 
-// @desc Create new super admin
-// @route POST /user/admin-create
-// @access Private
-export const adminCreate = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-  try {
-    const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = req.body;
-
-    if (req.user.role !== "admin") return res.status(401).json(new HttpException(401, "Unauthorized (not allowed)"));
-
-    // role admin for super admin
-    let { role } = req.body;
-    role = "admin";
-    const verified = true;
-
-    // check if req body is empty
-    if (
-      !username ||
-      !email ||
-      !password ||
-      !fullName ||
-      !gender ||
-      !phoneNumber ||
-      !role ||
-      !birthday ||
-      !street ||
-      !city ||
-      !country ||
-      !zipCode ||
-      !verified
-    ) {
-      return res.status(400).json(new HttpException(400, "Bad Request"));
-    }
-
-    // check duplicated email
-    const duplicate = await user.findOne({ email }).lean().exec();
-    if (duplicate) {
-      return res.status(409).json(new HttpException(409, "Email already exists"));
-    }
-
-    if (duplicate.username === username) {
-      return res.status(409).json(new HttpException(409, "Username already exists"));
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // new admin Object
-    const userObject = {
-      username,
-      fullName,
-      phoneNumber,
-      gender,
-      role,
-      email,
-      password: hashedPassword,
-      birthday: new Date(birthday),
-      address: {
-        street,
-        city,
-        country,
-        zipCode: Number(zipCode),
-      },
-      verified,
-    };
-
-    // Create new super admin
-    const newUser = await user.create(userObject);
-
-    if (newUser) {
-      return res.status(201).json({ code: 201, message: "Created", data: newUser });
-    } else {
-      return res.status(400).json(new HttpException(400, "Invalid user data received"));
-    }
-  } catch (error) {
-    next(error);
-  }
-};
-
 // @desc Create new user
 // @route POST /user
 // @access Public
@@ -124,26 +46,6 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
     } else {
       return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Get all users
-// @route GET /user/all
-// @access Private
-export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const users = await user
-      .find({ role: ["user"] })
-      .select("-password")
-      .lean();
-
-    if (!users?.length) {
-      return res.status(400).json(new HttpException(400, "No users found"));
-    }
-
-    return res.status(200).json({ code: 200, message: "OK", data: users });
   } catch (error) {
     next(error);
   }
@@ -355,166 +257,6 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
   }
 };
 
-// @desc delete user
-// @route DELETE /user/:id
-// @access Private
-export const userDelete = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-
-    if (isEmpty(id) || !id) return res.status(400).json(new HttpException(400, "Bad Request"));
-
-    const userFound = await user.findById(id).select("-password").exec();
-
-    if (isEmpty(userFound) || !userFound) return res.status(404).json(new HttpException(404, "User not found"));
-
-    const deletedUser = await userFound.deleteOne();
-
-    return res.status(200).json({
-      code: 200,
-      message: `User with email ${deletedUser.email} has id ${deletedUser._id} deleted`,
-      data: deletedUser,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Verification user email
-// @route GET /user/verify/:userId/:uniqueString
-// @access Public
-export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId, uniqueString } = req.params;
-    const linkVerified = `${CURRENT_URL}auth/user/verified/`;
-
-    if (!userId || !uniqueString) {
-      return res.status(400).json(new HttpException(400, "Bad Request"));
-    }
-
-    const findUserVerification = await UserVerificationModel.find({
-      userId,
-    }).exec();
-
-    if (findUserVerification.length === 0) {
-      return res.render(`pages/404`);
-    }
-
-    if (findUserVerification?.length > 0) {
-      const { expiresAt } = findUserVerification[0];
-      const hashedUniqueString = findUserVerification[0].uniqueString;
-
-      if (expiresAt < new Date()) {
-        UserVerificationModel.deleteOne({ userId })
-          .then(() => {})
-          .catch((err) => {
-            return res.render(`pages/404`);
-          });
-      } else {
-        // valid verify
-        // compare hashed unique string
-        const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
-
-        if (!compareUniqueString) {
-          return res.render(`pages/404`);
-        }
-
-        // unique string match
-        user
-          .updateOne({ _id: userId }, { verified: true })
-          .then(() => {
-            res.redirect(`${linkVerified}${userId}/${uniqueString}`);
-          })
-          .catch(() => {
-            res.render(`pages/404`);
-          });
-      }
-    } else {
-      return res.render(`pages/404`);
-    }
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Success verification page
-// @route GET /user/verified/:userId/:uniqueString
-// @access Public
-export const verifiedUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId } = req.params;
-    const { uniqueString } = req.params;
-
-    if (!userId || !uniqueString) {
-      return res.render(`pages/404`);
-    }
-
-    const userFound = await user.findById(userId).exec();
-    const UserVerificationFound = await UserVerificationModel.find({ userId });
-
-    if (!userFound || !UserVerificationFound) {
-      return res.render(`pages/404`);
-    }
-
-    // check unique string
-    const hashedUniqueString = UserVerificationFound[0]?.uniqueString || "null";
-    const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
-
-    if (!compareUniqueString || !userFound.verified || !hashedUniqueString) {
-      return res.render(`pages/404`);
-    }
-
-    if (userFound.verified && UserVerificationFound.length > 0) {
-      UserVerificationModel.deleteOne({ userId })
-        .then(() => {
-          return res.render(`pages/verifiedUser`);
-        })
-        .catch((err) => {
-          return res.render(`pages/404`);
-        });
-    } else {
-      return res.render(`pages/404`);
-    }
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Send email verification back
-// @route POST /user/send/verification
-// @access Public
-export const sendVerification = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json(new HttpException(400, "Bad Request"));
-    }
-
-    const userFound = await user.findOne({ email }).lean().exec();
-
-    if (!userFound) {
-      return res.status(404).json(new HttpException(404, "User not found"));
-    }
-
-    if (userFound.verified) {
-      return res.status(409).json(new HttpException(409, "User already verified"));
-    }
-
-    const userFoundVerification = await UserVerificationModel.find({
-      userId: userFound._id,
-    });
-
-    userFoundVerification.forEach((item) => {
-      item.remove();
-    });
-
-    return mailService.sendEmailVerification({ _id: userFound._id, email }, res);
-  } catch (error) {
-    next(error);
-  }
-};
-
 // @desc Reset password
 // @route POST /user/send/reset-password
 // @access Public
@@ -603,3 +345,260 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+// @desc Get all users
+// @route GET /user/all
+// @access Private
+// export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const users = await user
+//       .find({ role: ["user"] })
+//       .select("-password")
+//       .lean();
+
+//     if (!users?.length) {
+//       return res.status(400).json(new HttpException(400, "No users found"));
+//     }
+
+//     return res.status(200).json({ code: 200, message: "OK", data: users });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+// @desc Create new super admin
+// @route POST /user/admin-create
+// @access Private
+// export const adminCreate = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+//   try {
+//     const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = req.body;
+
+//     if (req.user.role !== "admin") return res.status(401).json(new HttpException(401, "Unauthorized (not allowed)"));
+
+//     // role admin for super admin
+//     let { role } = req.body;
+//     role = "admin";
+//     const verified = true;
+
+//     // check if req body is empty
+//     if (
+//       !username ||
+//       !email ||
+//       !password ||
+//       !fullName ||
+//       !gender ||
+//       !phoneNumber ||
+//       !role ||
+//       !birthday ||
+//       !street ||
+//       !city ||
+//       !country ||
+//       !zipCode ||
+//       !verified
+//     ) {
+//       return res.status(400).json(new HttpException(400, "Bad Request"));
+//     }
+
+//     // check duplicated email
+//     const duplicate = await user.findOne({ email }).lean().exec();
+//     if (duplicate) {
+//       return res.status(409).json(new HttpException(409, "Email already exists"));
+//     }
+
+//     if (duplicate.username === username) {
+//       return res.status(409).json(new HttpException(409, "Username already exists"));
+//     }
+
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // new admin Object
+//     const userObject = {
+//       username,
+//       fullName,
+//       phoneNumber,
+//       gender,
+//       role,
+//       email,
+//       password: hashedPassword,
+//       birthday: new Date(birthday),
+//       address: {
+//         street,
+//         city,
+//         country,
+//         zipCode: Number(zipCode),
+//       },
+//       verified,
+//     };
+
+//     // Create new super admin
+//     const newUser = await user.create(userObject);
+
+//     if (newUser) {
+//       return res.status(201).json({ code: 201, message: "Created", data: newUser });
+//     } else {
+//       return res.status(400).json(new HttpException(400, "Invalid user data received"));
+//     }
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// @desc delete user
+// @route DELETE /user/:id
+// @access Private
+// export const userDelete = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const { id } = req.params;
+
+//     if (isEmpty(id) || !id) return res.status(400).json(new HttpException(400, "Bad Request"));
+
+//     const userFound = await user.findById(id).select("-password").exec();
+
+//     if (isEmpty(userFound) || !userFound) return res.status(404).json(new HttpException(404, "User not found"));
+
+//     const deletedUser = await userFound.deleteOne();
+
+//     return res.status(200).json({
+//       code: 200,
+//       message: `User with email ${deletedUser.email} has id ${deletedUser._id} deleted`,
+//       data: deletedUser,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// @desc Verification user email
+// @route GET /user/verify/:userId/:uniqueString
+// @access Public
+// export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const { userId, uniqueString } = req.params;
+//     const linkVerified = `${CURRENT_URL}auth/user/verified/`;
+
+//     if (!userId || !uniqueString) {
+//       return res.status(400).json(new HttpException(400, "Bad Request"));
+//     }
+
+//     const findUserVerification = await UserVerificationModel.find({
+//       userId,
+//     }).exec();
+
+//     if (findUserVerification.length === 0) {
+//       return res.render(`pages/404`);
+//     }
+
+//     if (findUserVerification?.length > 0) {
+//       const { expiresAt } = findUserVerification[0];
+//       const hashedUniqueString = findUserVerification[0].uniqueString;
+
+//       if (expiresAt < new Date()) {
+//         UserVerificationModel.deleteOne({ userId })
+//           .then(() => {})
+//           .catch((err) => {
+//             return res.render(`pages/404`);
+//           });
+//       } else {
+//         // valid verify
+//         // compare hashed unique string
+//         const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
+
+//         if (!compareUniqueString) {
+//           return res.render(`pages/404`);
+//         }
+
+//         // unique string match
+//         user
+//           .updateOne({ _id: userId }, { verified: true })
+//           .then(() => {
+//             res.redirect(`${linkVerified}${userId}/${uniqueString}`);
+//           })
+//           .catch(() => {
+//             res.render(`pages/404`);
+//           });
+//       }
+//     } else {
+//       return res.render(`pages/404`);
+//     }
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// @desc Success verification page
+// @route GET /user/verified/:userId/:uniqueString
+// @access Public
+// export const verifiedUser = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const { userId } = req.params;
+//     const { uniqueString } = req.params;
+
+//     if (!userId || !uniqueString) {
+//       return res.render(`pages/404`);
+//     }
+
+//     const userFound = await user.findById(userId).exec();
+//     const UserVerificationFound = await UserVerificationModel.find({ userId });
+
+//     if (!userFound || !UserVerificationFound) {
+//       return res.render(`pages/404`);
+//     }
+
+//     // check unique string
+//     const hashedUniqueString = UserVerificationFound[0]?.uniqueString || "null";
+//     const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
+
+//     if (!compareUniqueString || !userFound.verified || !hashedUniqueString) {
+//       return res.render(`pages/404`);
+//     }
+
+//     if (userFound.verified && UserVerificationFound.length > 0) {
+//       UserVerificationModel.deleteOne({ userId })
+//         .then(() => {
+//           return res.render(`pages/verifiedUser`);
+//         })
+//         .catch((err) => {
+//           return res.render(`pages/404`);
+//         });
+//     } else {
+//       return res.render(`pages/404`);
+//     }
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// @desc Send email verification back
+// @route POST /user/send/verification
+// @access Public
+// export const sendVerification = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json(new HttpException(400, "Bad Request"));
+//     }
+
+//     const userFound = await user.findOne({ email }).lean().exec();
+
+//     if (!userFound) {
+//       return res.status(404).json(new HttpException(404, "User not found"));
+//     }
+
+//     if (userFound.verified) {
+//       return res.status(409).json(new HttpException(409, "User already verified"));
+//     }
+
+//     const userFoundVerification = await UserVerificationModel.find({
+//       userId: userFound._id,
+//     });
+
+//     userFoundVerification.forEach((item) => {
+//       item.remove();
+//     });
+
+//     return mailService.sendEmailVerification({ _id: userFound._id, email }, res);
+//   } catch (error) {
+//     next(error);
+//   }
+// };

@@ -81,6 +81,7 @@ export default interface IUser {
   certificate: ICertificate[];
   portfolioUrl: string[];
   verified: boolean; // required
+  status: boolean; // required
   createdAt: Date; // required
   updatedAt: Date | null;
   deletedAt: Date | null;

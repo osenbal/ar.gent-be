@@ -83,7 +83,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     // get id from access token
     const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
-    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshToken, _id } });
+    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshTokenData, _id } });
   } catch (error) {
     next(error);
   }
@@ -94,9 +94,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 // @access Private - just to clear cookie if exist
 export const logout = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const cookies = req.cookies;
-    if (!cookies?.Authorization) return res.status(204).json({ code: 204, message: "No Auth Token" });
-
     res.clearCookie("Authorization", {
       secure: true,
       httpOnly: true,
@@ -109,7 +106,7 @@ export const logout = async (req: IRequestWithUser, res: Response, next: NextFun
       sameSite: "none",
     });
 
-    return res.status(200).json({ code: 200, message: "Cookie Cleared" });
+    return res.status(200).json({ code: 200, message: "Logged out" });
   } catch (error) {
     next(error);
   }

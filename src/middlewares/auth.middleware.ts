@@ -17,6 +17,22 @@ const authMiddleware = async (req: IRequestWithUser, res: Response, next: NextFu
       const userId = verificationResponse._id;
       const findUser = await UserModel.findById(userId).lean().exec();
 
+      if (!findUser.status) {
+        res.clearCookie("Authorization", {
+          secure: true,
+          httpOnly: true,
+          sameSite: "none",
+        });
+
+        res.clearCookie("refreshToken", {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        });
+
+        next(new HttpException(409, "account has been banned"));
+      }
+
       if (findUser) {
         req.user = findUser;
         next();

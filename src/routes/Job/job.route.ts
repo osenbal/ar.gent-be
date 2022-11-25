@@ -1,6 +1,15 @@
 import { Router } from "express";
 import { Routes } from "@interfaces/routes.interface";
-import { createJob, getAllJob, getJobByUserId, getJobById, updateJob, deleteJobById } from "@controllers/job.controller";
+import {
+  createJob,
+  getAllJob,
+  getJobByUserId,
+  getJobById,
+  updateJob,
+  deleteJobById,
+  handleApplyJob,
+  checkIsApplied,
+} from "@controllers/job.controller";
 import { authPolicyMiddleware, authRoleAndPolicyMiddleware, authRoleMiddleware } from "@middlewares/authRole.middleware";
 import authMiddleware from "@middlewares/auth.middleware";
 
@@ -23,6 +32,10 @@ class JobRoute implements Routes {
     this.router.route(`${this.path}:jobId`).patch(authMiddleware, updateJob);
 
     this.router.route(`${this.path}:jobId`).delete(authMiddleware, deleteJobById);
+
+    this.router.route(`${this.path}apply/:jobId`).post(authMiddleware, handleApplyJob);
+
+    this.router.route(`${this.path}check-apply/:jobId`).get(authMiddleware, checkIsApplied);
   }
 }
 

@@ -1,9 +1,14 @@
-import { Request } from 'express';
-import IUser from '@interfaces/user.interface';
+import { Request } from "express";
+import IUser from "@interfaces/user.interface";
+import IAdmin from "./admin.interface";
 
 export interface IDataStoredInToken {
   _id: string;
   role: string;
+}
+
+export interface IDataStoredInTokenAdmin {
+  _id: string;
 }
 
 export interface ITokenData {
@@ -13,4 +18,8 @@ export interface ITokenData {
 
 export interface IRequestWithUser extends Request {
   user: IUser;
+}
+
+export interface IRequestWithAdmin extends Request {
+  admin: IAdmin;
 }

@@ -22,8 +22,6 @@ class UserRoute implements Routes {
 
     this.router.route(`${this.path}:id`).patch(authMiddleware, authPolicyMiddleware, userController.userEdit);
 
-    this.router.route(`${this.path}:id`).delete(authMiddleware, authRoleAndPolicyMiddleware("admin"), userController.userDelete);
-
     this.router
       .route(`${this.path}upload/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/avatar", filterImage).single("image"), userController.uploadImage);
@@ -32,19 +30,19 @@ class UserRoute implements Routes {
       .route(`${this.path}uploadfile/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/cv", filterPdf).single("cv"), userController.uploadFile);
 
-    this.router.route(`${this.path}admin-create`).post(authMiddleware, authRoleMiddleware("admin"), userController.adminCreate);
-
-    this.router.route(`${this.path}all`).get(authMiddleware, authRoleMiddleware("admin"), userController.getAllUser);
-
-    this.router.route(`${this.path}send/verification`).get(authMiddleware, authPolicyMiddleware, userController.sendVerification);
-
-    this.router.route(`${this.path}verify/:userId/:uniqueString`).get(userController.verifyUser);
-
-    this.router.route(`${this.path}verified/:userId/:uniqueString`).get(userController.verifiedUser);
-
     this.router.route(`${this.path}send/reset-password`).post(userController.requestResetPassword);
 
     this.router.route(`${this.path}reset/password/:userId/:uniqueString`).post(userController.resetPassword);
+
+    // this.router.route(`${this.path}:id`).delete(authMiddleware, authRoleAndPolicyMiddleware("admin"), userController.userDelete);
+
+    // this.router.route(`${this.path}all`).get(authMiddleware, authRoleMiddleware("admin"), userController.getAllUser);
+
+    // this.router.route(`${this.path}send/verification`).get(authMiddleware, authPolicyMiddleware, userController.sendVerification);
+
+    // this.router.route(`${this.path}verify/:userId/:uniqueString`).get(userController.verifyUser);
+
+    // this.router.route(`${this.path}verified/:userId/:uniqueString`).get(userController.verifiedUser);
   }
 }
 

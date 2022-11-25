@@ -90,6 +90,10 @@ const UserSchema = new Schema<IUser>({
     type: Boolean,
     default: false,
   },
+  status: {
+    type: Boolean,
+    default: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

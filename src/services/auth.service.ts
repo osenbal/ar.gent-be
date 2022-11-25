@@ -3,13 +3,16 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "@config/config";
 import IUser, { IAddress, IUserRegister } from "@interfaces/user.interface";
-import { ITokenData, IDataStoredInToken } from "@interfaces/auth.interface";
+import { ITokenData, IDataStoredInToken, IDataStoredInTokenAdmin } from "@interfaces/auth.interface";
 import { isEmpty } from "@utils/util";
 import { HttpException } from "@/exceptions/HttpException";
+import IAdmin from "@/interfaces/admin.interface";
+import AdminModel from "@/models/Admin/Admin.model";
 // import { Request } from "express";
 
 class AuthService {
   public user = UserModel;
+  public admin = AdminModel;
 
   public async register(req, newUser, avatar) {
     if (isEmpty(newUser)) throw new HttpException(400, "Bad request");
@@ -61,7 +64,9 @@ class AuthService {
     if (!foundUser) throw new HttpException(409, `This email ${userData.email} was not found`);
 
     const isPasswordMatching: boolean = await bcrypt.compare(userData.password, foundUser.password);
-    if (!isPasswordMatching) throw new HttpException(409, "Password is not matching");
+    if (!isPasswordMatching) throw new HttpException(409, "Sorry, Password wrong");
+
+    if (!foundUser.status) throw new HttpException(409, `Account has been banned`);
 
     const accessToken = this.createToken(foundUser);
     const refreshTokenData = this.createRefreshToken(foundUser);
@@ -79,6 +84,8 @@ class AuthService {
 
     const user = await this.user.findById(_id).exec();
     if (!user) throw new HttpException(409, "User not found");
+
+    if (!user.status) throw new HttpException(409, `Account has been banned`);
 
     const accessToken: ITokenData = this.createToken(user);
     const refreshTokenData: ITokenData = this.createRefreshToken(user);
@@ -135,6 +142,76 @@ class AuthService {
   public verifyAccessToken(token: string): IDataStoredInToken {
     const secretKey: string = ACCESS_TOKEN_SECRET;
     return jwt.verify(token, secretKey) as IDataStoredInToken;
+  }
+
+  // ---- Admin auth service ---------------
+  public createTokenAdmin(admin: IAdmin): ITokenData {
+    const dataStoredInToken: IDataStoredInTokenAdmin = {
+      _id: admin._id.toString(),
+    };
+
+    const secretKey: string = ACCESS_TOKEN_SECRET;
+
+    const expiresIn: number = 1000 * 60 * 60; // one hour
+
+    return {
+      expiresIn: expiresIn,
+      token: jwt.sign(dataStoredInToken, secretKey, { expiresIn }),
+    };
+  }
+
+  public createRefreshTokenAdmin(admin: IAdmin): ITokenData {
+    const dataStoredInToken: IDataStoredInTokenAdmin = {
+      _id: admin._id.toString(),
+    };
+
+    const secretKey: string = REFRESH_TOKEN_SECRET;
+
+    const expiresIn: number = 1000 * 60 * 60 * 24; // one day
+
+    return {
+      expiresIn: expiresIn,
+      token: jwt.sign(dataStoredInToken, secretKey, { expiresIn }),
+    };
+  }
+
+  public async loginAdmin(adminData): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData; adminId: string }> {
+    if (isEmpty(adminData)) throw new HttpException(400, "Unauthorized");
+
+    const foundAdmin: IAdmin = await this.admin.findOne({ email: adminData.email }).lean();
+
+    if (!foundAdmin) throw new HttpException(409, `This email ${adminData.email} was not found`);
+
+    const isPasswordMatching: boolean = await bcrypt.compare(adminData.password, foundAdmin.password);
+
+    if (!isPasswordMatching) throw new HttpException(409, "Sorry, Password wrong");
+
+    const accessToken = this.createTokenAdmin(foundAdmin);
+    const refreshTokenData = this.createRefreshTokenAdmin(foundAdmin);
+
+    return { refreshTokenData, accessToken, adminId: foundAdmin._id.toString() };
+  }
+
+  public async refreshAdmin(refreshToken: string): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+    if (!refreshToken) throw new HttpException(400, "Unauthorized");
+
+    const secretKey: string = REFRESH_TOKEN_SECRET;
+    const { _id } = jwt.verify(refreshToken, secretKey) as IDataStoredInToken;
+
+    if (!_id) throw new HttpException(400, "Unauthorized");
+
+    const admin = await this.admin.findById(_id).exec();
+    if (!admin) throw new HttpException(409, "User not found");
+
+    const accessToken: ITokenData = this.createTokenAdmin(admin);
+    const refreshTokenData: ITokenData = this.createRefreshTokenAdmin(admin);
+
+    return { refreshTokenData, accessToken };
+  }
+
+  public verifyAccessTokenAdmin(token: string): IDataStoredInTokenAdmin {
+    const secretKey: string = ACCESS_TOKEN_SECRET;
+    return jwt.verify(token, secretKey) as IDataStoredInTokenAdmin;
   }
 }
 
