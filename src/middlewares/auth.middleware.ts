@@ -19,14 +19,14 @@ const authMiddleware = async (req: IRequestWithUser, res: Response, next: NextFu
 
       if (!findUser.status) {
         res.clearCookie("Authorization", {
-          secure: true,
+          secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
           httpOnly: true,
           sameSite: "none",
         });
 
         res.clearCookie("refreshToken", {
           httpOnly: true,
-          secure: true,
+          secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
           sameSite: "none",
         });
 

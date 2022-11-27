@@ -9,6 +9,7 @@ import {
   deleteJobById,
   handleApplyJob,
   checkIsApplied,
+  getAppliciants,
 } from "@controllers/job.controller";
 import { authPolicyMiddleware, authRoleAndPolicyMiddleware, authRoleMiddleware } from "@middlewares/authRole.middleware";
 import authMiddleware from "@middlewares/auth.middleware";
@@ -23,6 +24,7 @@ class JobRoute implements Routes {
 
   private initializeRoutes() {
     this.router.route(`${this.path}`).get(authMiddleware, getAllJob);
+
     this.router.route(`${this.path}`).post(authMiddleware, createJob);
 
     this.router.route(`${this.path}id/:jobId`).get(getJobById);
@@ -32,6 +34,8 @@ class JobRoute implements Routes {
     this.router.route(`${this.path}:jobId`).patch(authMiddleware, updateJob);
 
     this.router.route(`${this.path}:jobId`).delete(authMiddleware, deleteJobById);
+
+    this.router.route(`${this.path}:jobId/appliciants`).get(authMiddleware, getAppliciants);
 
     this.router.route(`${this.path}apply/:jobId`).post(authMiddleware, handleApplyJob);
 

@@ -66,14 +66,14 @@ export const loginAdmin = async (req: Request, res: Response, next: NextFunction
       const { refreshTokenData, accessToken, adminId } = await authService.loginAdmin(adminData);
 
       res.cookie("adminAuth", accessToken.token, {
-        secure: true,
+        secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
         sameSite: "none",
         maxAge: accessToken.expiresIn,
       });
 
       res.cookie("adminRefreshToken", refreshTokenData.token, {
-        secure: true,
+        secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
         sameSite: "none",
         maxAge: refreshTokenData.expiresIn,
@@ -118,14 +118,14 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
     const { refreshTokenData, accessToken } = await authService.refreshAdmin(adminRefreshToken);
 
     res.cookie("adminAuth", accessToken.token, {
-      secure: true,
+      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("adminRefreshToken", refreshTokenData.token, {
-      secure: true,
+      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
       maxAge: refreshTokenData.expiresIn,
@@ -143,14 +143,14 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
 export const logoutAdmin = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
   try {
     res.clearCookie("adminAuth", {
-      secure: true,
+      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
     });
 
     res.clearCookie("adminRefreshToken", {
       httpOnly: true,
-      secure: true,
+      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       sameSite: "none",
     });
 

@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 import { HttpException } from "@exceptions/HttpException";
 import { Response } from "express";
 import UserResetPasswordModel from "@/models/User/UserResetPassword.model";
+import jwt from "jsonwebtoken";
+import { IDataStoredInToken } from "@/interfaces/auth.interface";
 
 export class MailService {
   transporter = nodemailer.createTransport({
@@ -19,8 +21,6 @@ export class MailService {
 
   sendEmailVerification = async ({ _id, email }: { _id: Types.ObjectId; email: string }, res: Response) => {
     const uniqueString = uuidv4() + _id;
-
-    // hash the unique string
     const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
 
     const mailOptions = {
@@ -29,7 +29,7 @@ export class MailService {
       subject: "[ar.get] Verify your email",
       html: `<p>Verify your email address to complete the signup and login into your account.</p><br />
       <p>This link will <b>expire in 6 hours</b>.</p><br />
-      <p>Press <a href=${CURRENT_URL + "auth/user/verify/" + _id + "/" + uniqueString}>here</a> to process.</p>`,
+      <p>Press <a href=${CURRENT_URL + "user/verify/" + _id + "/" + uniqueString}>here</a> to process.</p>`,
     };
 
     const newVerification = new UserVerificationModel({
@@ -58,10 +58,14 @@ export class MailService {
 
   sendEmailResetPassword = async ({ _id, email }: { _id: Types.ObjectId; email: string }, res: Response) => {
     // TODO
-    const uniqueString = uuidv4() + _id;
+    // const uniqueString = uuidv4() + _id;
+    const dataStoredInToken: IDataStoredInToken = {
+      _id: _id.toString(),
+      role: "user",
+    };
 
     // hash the unique string
-    const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
+    const hashedUniqueString = jwt.sign(dataStoredInToken, process.env.RESET_PASSWORD_KEY, { expiresIn: 1000 * 60 * 10 });
 
     const mailOptions = {
       from: "ar.gent",
@@ -69,17 +73,17 @@ export class MailService {
       subject: "[ar.get] Reset Password",
       html: `<p>Reset your password</p><br />
       <p>This link will <b>expire in 1 minutes</b>.</p><br />
-      <p>Press <a href=${FRONTEND_URL + "reset/" + _id + "/" + uniqueString}>here</a> to process.</p>`,
+      <p>Press <a href=${CURRENT_URL + "auth/page/reset-password/" + hashedUniqueString}>here</a> to process.</p>`,
     };
 
-    const newUserResetPassword = new UserResetPasswordModel({
+    const objectResetPassword = new UserResetPasswordModel({
       userId: _id,
       uniqueString: hashedUniqueString,
       createdAt: Date.now(),
       expiresAt: Date.now() + 60000 * 10, // 10 minutes
     });
 
-    newUserResetPassword
+    objectResetPassword
       .save()
       .then(() => {
         this.transporter.sendMail(mailOptions).then(() => {
@@ -87,7 +91,7 @@ export class MailService {
             code: 200,
             status: "success",
             message: "Link Reset password has been sent to your email",
-            uniqueString,
+            uniqueString: hashedUniqueString,
           });
         });
       })

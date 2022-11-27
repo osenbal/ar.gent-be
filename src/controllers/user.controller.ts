@@ -7,13 +7,15 @@ import AuthService from "@services/auth.service";
 import { HttpException } from "@exceptions/HttpException";
 import { MailService } from "@services/mail.service";
 import { CURRENT_URL } from "@config/config";
-import { IRequestWithUser } from "@interfaces/auth.interface";
+import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
 import { IEducation, IExperience } from "@interfaces/user.interface";
 import { isEmpty } from "@utils/util";
+import jwt from "jsonwebtoken";
 
 const authService = new AuthService();
-const user = UserModel;
 const mailService = new MailService();
+const user = UserModel;
+const userResetPassword = UserResetPasswordModel;
 
 // @desc Create new user
 // @route POST /user
@@ -29,13 +31,13 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
       // set cookie auth token
       res.cookie("Authorization", accessToken.token, {
-        secure: true,
+        secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
         sameSite: "none",
         maxAge: accessToken.expiresIn,
       });
       res.cookie("refreshToken", refreshToken.token, {
-        secure: true,
+        secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
         maxAge: refreshToken.expiresIn,
       });
@@ -139,7 +141,7 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     if (req.body.email) {
       if (req.body.email === userFound.email) {
-        return res.status(400).json(new HttpException(400, "Email as same"));
+        return res.status(400).json(new HttpException(400, "Email already used"));
       }
 
       // check duplicated email
@@ -177,7 +179,13 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
 
       if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-      const imagePath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.avatar;
+      // check form data image
+
+      if (!req.file) {
+        return res.status(400).json(new HttpException(400, "Bad Request"));
+      }
+
+      const imagePath = req.file.path;
 
       if (!imagePath) {
         return res.status(400).json(new HttpException(400, "Bad Request"));
@@ -197,7 +205,11 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
 
       if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-      const imagePath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.banner;
+      if (!req.file) {
+        return res.status(400).json(new HttpException(400, "Bad Request"));
+      }
+
+      const imagePath = req.file.path;
 
       if (!imagePath) {
         return res.status(400).json(new HttpException(400, "Bad Request"));
@@ -232,10 +244,12 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
     if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
     if (req.query.type === "cv") {
-      console.log("== req file == ", req.file);
-      const cvPath = req.file?.path || req.protocol + "://" + req.get("host") + "/" + userFound.cv;
+      if (!req.file) {
+        return res.status(400).json(new HttpException(400, "Bad Request"));
+      }
 
-      console.log("== cv path == ", cvPath);
+      const cvPath = req.file.path;
+
       if (!cvPath) {
         return res.status(400).json(new HttpException(400, "Bad Request"));
       }
@@ -252,95 +266,6 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
     }
 
     return res.status(400).json(new HttpException(400, "Bad Request"));
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Reset password
-// @route POST /user/send/reset-password
-// @access Public
-export const requestResetPassword = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json(new HttpException(400, "Bad Request"));
-    }
-
-    const userFound = await user.findOne({ email }).exec();
-
-    if (!userFound) {
-      return res.status(404).json(new HttpException(404, "User not found"));
-    }
-
-    if (!userFound.verified) {
-      return res.status(409).json(new HttpException(409, "User not verified"));
-    }
-
-    const findUserResetPassword = await UserResetPasswordModel.findOne({
-      userId: userFound._id,
-    });
-
-    if (findUserResetPassword || findUserResetPassword?.expiresAt > new Date()) {
-      findUserResetPassword.remove();
-    }
-
-    // send email reset password
-    return mailService.sendEmailResetPassword({ _id: userFound._id, email }, res);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Reset password
-// @route POST /user/reset/password/:userId/:uniqueString
-// @access Private
-export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId, uniqueString } = req.params;
-    const { password } = req.body;
-
-    if (!userId || !uniqueString || !password) {
-      return res.status(400).json(new HttpException(400, "Bad Request"));
-    }
-
-    const userFound = await user.findById(userId).exec();
-
-    if (!userFound) {
-      return res.status(404).json(new HttpException(404, "User not found"));
-    }
-
-    if (!userFound.verified) {
-      return res.status(409).json(new HttpException(409, "User not verified"));
-    }
-
-    const findUserResetPassword = await UserResetPasswordModel.findOne({
-      userId: userFound._id,
-    });
-
-    if (!findUserResetPassword) {
-      return res.status(404).json(new HttpException(404, "Invalid Link or Expired"));
-    }
-
-    const hashedUniqueString = findUserResetPassword.uniqueString;
-    const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
-
-    if (!compareUniqueString) {
-      return res.status(404).json(new HttpException(404, "Invalid Link or Expired"));
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    user
-      .updateOne({ _id: userId }, { password: hashedPassword })
-      .then(() => {
-        findUserResetPassword.remove();
-        return res.status(200).json(new HttpException(200, "Password success updated"));
-      })
-      .catch(() => {
-        return res.status(500).json(new HttpException(500, "Internal Server Error"));
-      });
   } catch (error) {
     next(error);
   }

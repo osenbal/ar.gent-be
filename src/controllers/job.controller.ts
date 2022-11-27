@@ -250,3 +250,32 @@ export const checkIsApplied = async (req: IRequestWithUser, res: Response, next:
     next(error);
   }
 };
+
+export const getAppliciants = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    const { userId } = jobFound;
+    if (userId.toString() !== req.user._id.toString()) {
+      return res.status(401).json(new HttpException(401, "Unauthorized"));
+    }
+
+    const applyJobs = await applyJobUser.find({ jobId }).lean();
+
+    if (applyJobs.length >= 1) {
+      const listUserId = applyJobs.map((item) => item.userId);
+      const usersData = await user.find({ _id: { $in: listUserId } });
+
+      return res.status(200).json({ code: 200, message: "OK", data: usersData });
+    }
+
+    return res.status(200).json({ code: 200, message: "OK", data: [] });
+  } catch (error) {
+    next(error);
+  }
+};

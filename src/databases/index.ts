@@ -6,7 +6,7 @@ export const DbConfig = {
   url:
     process.env.NODE_ENV === "test"
       ? "mongodb://localhost:27017/test"
-      : process.env.NODE_ENV === "development"
+      : process.env.NODE_ENV === "development" || process.env.NODE_ENV === "developmentBackend"
       ? `mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`
       : `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@argent.ufb0iq2.mongodb.net/${DB_DATABASE}?retryWrites=true&w=majority`,
   options: {
