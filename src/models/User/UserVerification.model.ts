@@ -1,12 +1,11 @@
-import { model, Schema } from 'mongoose';
-import { UserVerification } from '@interfaces/user.interface';
+import { model, Schema } from "mongoose";
+import { UserVerification } from "@interfaces/user.interface";
 
 const UserVerificationSchema = new Schema<UserVerification>({
   userId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
+    ref: "User",
   },
-  uniqueString: String,
   createdAt: {
     type: Date,
     default: Date.now,
@@ -14,9 +13,6 @@ const UserVerificationSchema = new Schema<UserVerification>({
   expiresAt: Date,
 });
 
-const UserVerificationModel = model<UserVerification>(
-  'UserVerification',
-  UserVerificationSchema
-);
+const UserVerificationModel = model<UserVerification>("UserVerification", UserVerificationSchema);
 
 export default UserVerificationModel;

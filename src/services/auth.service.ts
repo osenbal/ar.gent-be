@@ -8,13 +8,15 @@ import { isEmpty } from "@utils/util";
 import { HttpException } from "@/exceptions/HttpException";
 import IAdmin from "@/interfaces/admin.interface";
 import AdminModel from "@/models/Admin/Admin.model";
+import { MailService } from "./mail.service";
 // import { Request } from "express";
 
 class AuthService {
-  public user = UserModel;
-  public admin = AdminModel;
+  private user = UserModel;
+  private admin = AdminModel;
+  private mailService = new MailService();
 
-  public async register(req, newUser, avatar) {
+  public async register(req, res, newUser, avatar) {
     if (isEmpty(newUser)) throw new HttpException(400, "Bad request");
     if (isEmpty(avatar)) throw new HttpException(400, "Bad request");
 
@@ -39,9 +41,15 @@ class AuthService {
       throw new HttpException(409, `This username ${newUser.username} already exists`);
     }
 
+    const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+
+    if (!PASSWORD_REGEX.test(password)) {
+      throw new HttpException(400, `password not valid`);
+    }
+
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
 
-    const newUserObject: IUserRegister = {
+    const newUserObject = new this.user({
       avatar: req.protocol + "://" + req.get("host") + "/" + avatar,
       username: newUser.username,
       fullName: newUser.fullName,
@@ -50,11 +58,13 @@ class AuthService {
       birthday: new Date(newUser.birthday),
       email: newUser.email,
       password: hashedPassword,
-    };
+    });
 
-    const createUserData: IUser = await this.user.create(newUserObject);
+    newUserObject.save((err) => {
+      if (err) return res.status(500).json(new HttpException(500, "Internal server error"));
+    });
 
-    return createUserData;
+    return newUserObject;
   }
 
   public async login(userData): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData; userId: string }> {

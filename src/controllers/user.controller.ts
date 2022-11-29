@@ -14,8 +14,9 @@ import jwt from "jsonwebtoken";
 
 const authService = new AuthService();
 const mailService = new MailService();
-const user = UserModel;
 const userResetPassword = UserResetPasswordModel;
+const userVerification = UserVerificationModel;
+const user = UserModel;
 
 // @desc Create new user
 // @route POST /user
@@ -23,7 +24,7 @@ const userResetPassword = UserResetPasswordModel;
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // create new user
-    const newUser = await authService.register(req, req.body, req.file?.path);
+    const newUser = await authService.register(req, res, req.body, req.file?.path);
 
     if (newUser) {
       const accessToken = authService.createToken(newUser);
@@ -36,6 +37,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
         sameSite: "none",
         maxAge: accessToken.expiresIn,
       });
+
       res.cookie("refreshToken", refreshToken.token, {
         secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
@@ -44,7 +46,6 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
       // send email verification
       return mailService.sendEmailVerification(newUser, res);
-      // return res.status(200).json({userId: newUser._id});
     } else {
       return res.status(400).json(new HttpException(400, "Invalid user data received"));
     }
@@ -271,259 +272,58 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
   }
 };
 
-// @desc Get all users
-// @route GET /user/all
-// @access Private
-// export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const users = await user
-//       .find({ role: ["user"] })
-//       .select("-password")
-//       .lean();
+export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-//     if (!users?.length) {
-//       return res.status(400).json(new HttpException(400, "No users found"));
-//     }
+    const userFound = await user.findById(id).exec();
 
-//     return res.status(200).json({ code: 200, message: "OK", data: users });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-// @desc Create new super admin
-// @route POST /user/admin-create
-// @access Private
-// export const adminCreate = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-//   try {
-//     const { username, fullName, gender, email, password, phoneNumber, birthday, street, city, country, zipCode } = req.body;
+    if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-//     if (req.user.role !== "admin") return res.status(401).json(new HttpException(401, "Unauthorized (not allowed)"));
+    if (userFound.verified) {
+      return res.status(400).json(new HttpException(400, "User already verified"));
+    }
 
-//     // role admin for super admin
-//     let { role } = req.body;
-//     role = "admin";
-//     const verified = true;
+    const userVerify = await userVerification.findOne({ userId: id }).exec();
 
-//     // check if req body is empty
-//     if (
-//       !username ||
-//       !email ||
-//       !password ||
-//       !fullName ||
-//       !gender ||
-//       !phoneNumber ||
-//       !role ||
-//       !birthday ||
-//       !street ||
-//       !city ||
-//       !country ||
-//       !zipCode ||
-//       !verified
-//     ) {
-//       return res.status(400).json(new HttpException(400, "Bad Request"));
-//     }
+    if (!userVerify) return res.status(404).json(new HttpException(404, "User verification not found"));
 
-//     // check duplicated email
-//     const duplicate = await user.findOne({ email }).lean().exec();
-//     if (duplicate) {
-//       return res.status(409).json(new HttpException(409, "Email already exists"));
-//     }
+    if (userVerify.expiresAt < new Date()) {
+      userVerify.remove();
+      return res.status(400).json(new HttpException(400, "Verification code expired"));
+    }
 
-//     if (duplicate.username === username) {
-//       return res.status(409).json(new HttpException(409, "Username already exists"));
-//     }
+    userFound.verified = true;
 
-//     // Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
+    const updatedUser = await userFound.save();
 
-//     // new admin Object
-//     const userObject = {
-//       username,
-//       fullName,
-//       phoneNumber,
-//       gender,
-//       role,
-//       email,
-//       password: hashedPassword,
-//       birthday: new Date(birthday),
-//       address: {
-//         street,
-//         city,
-//         country,
-//         zipCode: Number(zipCode),
-//       },
-//       verified,
-//     };
+    if (updatedUser) {
+      userVerify.remove();
+      return res.status(200).json({ code: 200, message: "User verified" });
+    } else {
+      return res.status(500).json(new HttpException(500, "server error"));
+    }
+  } catch (error) {
+    next(error);
+  }
+};
 
-//     // Create new super admin
-//     const newUser = await user.create(userObject);
+export const checkVerified = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-//     if (newUser) {
-//       return res.status(201).json({ code: 201, message: "Created", data: newUser });
-//     } else {
-//       return res.status(400).json(new HttpException(400, "Invalid user data received"));
-//     }
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+    const userFound = await user.findById(id).exec();
 
-// @desc delete user
-// @route DELETE /user/:id
-// @access Private
-// export const userDelete = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const { id } = req.params;
+    if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-//     if (isEmpty(id) || !id) return res.status(400).json(new HttpException(400, "Bad Request"));
-
-//     const userFound = await user.findById(id).select("-password").exec();
-
-//     if (isEmpty(userFound) || !userFound) return res.status(404).json(new HttpException(404, "User not found"));
-
-//     const deletedUser = await userFound.deleteOne();
-
-//     return res.status(200).json({
-//       code: 200,
-//       message: `User with email ${deletedUser.email} has id ${deletedUser._id} deleted`,
-//       data: deletedUser,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-// @desc Verification user email
-// @route GET /user/verify/:userId/:uniqueString
-// @access Public
-// export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const { userId, uniqueString } = req.params;
-//     const linkVerified = `${CURRENT_URL}auth/user/verified/`;
-
-//     if (!userId || !uniqueString) {
-//       return res.status(400).json(new HttpException(400, "Bad Request"));
-//     }
-
-//     const findUserVerification = await UserVerificationModel.find({
-//       userId,
-//     }).exec();
-
-//     if (findUserVerification.length === 0) {
-//       return res.render(`pages/404`);
-//     }
-
-//     if (findUserVerification?.length > 0) {
-//       const { expiresAt } = findUserVerification[0];
-//       const hashedUniqueString = findUserVerification[0].uniqueString;
-
-//       if (expiresAt < new Date()) {
-//         UserVerificationModel.deleteOne({ userId })
-//           .then(() => {})
-//           .catch((err) => {
-//             return res.render(`pages/404`);
-//           });
-//       } else {
-//         // valid verify
-//         // compare hashed unique string
-//         const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
-
-//         if (!compareUniqueString) {
-//           return res.render(`pages/404`);
-//         }
-
-//         // unique string match
-//         user
-//           .updateOne({ _id: userId }, { verified: true })
-//           .then(() => {
-//             res.redirect(`${linkVerified}${userId}/${uniqueString}`);
-//           })
-//           .catch(() => {
-//             res.render(`pages/404`);
-//           });
-//       }
-//     } else {
-//       return res.render(`pages/404`);
-//     }
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-// @desc Success verification page
-// @route GET /user/verified/:userId/:uniqueString
-// @access Public
-// export const verifiedUser = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const { userId } = req.params;
-//     const { uniqueString } = req.params;
-
-//     if (!userId || !uniqueString) {
-//       return res.render(`pages/404`);
-//     }
-
-//     const userFound = await user.findById(userId).exec();
-//     const UserVerificationFound = await UserVerificationModel.find({ userId });
-
-//     if (!userFound || !UserVerificationFound) {
-//       return res.render(`pages/404`);
-//     }
-
-//     // check unique string
-//     const hashedUniqueString = UserVerificationFound[0]?.uniqueString || "null";
-//     const compareUniqueString: boolean = await bcrypt.compare(uniqueString, hashedUniqueString);
-
-//     if (!compareUniqueString || !userFound.verified || !hashedUniqueString) {
-//       return res.render(`pages/404`);
-//     }
-
-//     if (userFound.verified && UserVerificationFound.length > 0) {
-//       UserVerificationModel.deleteOne({ userId })
-//         .then(() => {
-//           return res.render(`pages/verifiedUser`);
-//         })
-//         .catch((err) => {
-//           return res.render(`pages/404`);
-//         });
-//     } else {
-//       return res.render(`pages/404`);
-//     }
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-// @desc Send email verification back
-// @route POST /user/send/verification
-// @access Public
-// export const sendVerification = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
-//   try {
-//     const { email } = req.body;
-
-//     if (!email) {
-//       return res.status(400).json(new HttpException(400, "Bad Request"));
-//     }
-
-//     const userFound = await user.findOne({ email }).lean().exec();
-
-//     if (!userFound) {
-//       return res.status(404).json(new HttpException(404, "User not found"));
-//     }
-
-//     if (userFound.verified) {
-//       return res.status(409).json(new HttpException(409, "User already verified"));
-//     }
-
-//     const userFoundVerification = await UserVerificationModel.find({
-//       userId: userFound._id,
-//     });
-
-//     userFoundVerification.forEach((item) => {
-//       item.remove();
-//     });
-
-//     return mailService.sendEmailVerification({ _id: userFound._id, email }, res);
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+    if (userFound.verified) {
+      return res.status(200).json({ code: 200, message: "User verified", data: true });
+    } else {
+      return res.status(400).json(new HttpException(400, "User not verified"));
+    }
+  } catch (error) {
+    next(error);
+  }
+};

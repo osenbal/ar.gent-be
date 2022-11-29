@@ -136,12 +136,8 @@ export const requestResetPassword = async (req: Request, res: Response, next: Ne
     const userFound = await user.findOne({ email }).exec();
 
     if (!userFound) {
-      return res.status(404).json(new HttpException(404, "User not found"));
+      return res.status(404).json(new HttpException(404, "Email not found"));
     }
-
-    // if (!userFound.verified) {
-    //   return res.status(409).json(new HttpException(409, "User not verified"));
-    // }
 
     const findUserResetPassword = await userResetPassword
       .findOne({
@@ -150,13 +146,11 @@ export const requestResetPassword = async (req: Request, res: Response, next: Ne
       .exec();
 
     if (findUserResetPassword) {
-      if (findUserResetPassword?.expiresAt.getTime() < Date.now()) {
-        findUserResetPassword.remove();
-      } else {
-        return res.status(409).json(new HttpException(409, "User already requested check your email"));
-      }
+      findUserResetPassword.remove();
+      return mailService.sendEmailResetPassword({ _id: userFound._id, email }, res);
+    } else {
+      return mailService.sendEmailResetPassword({ _id: userFound._id, email }, res);
     }
-    return mailService.sendEmailResetPassword({ _id: userFound._id, email }, res);
   } catch (error) {
     next(error);
   }
@@ -199,11 +193,17 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
         return res.status(404).json(new HttpException(404, "Link expired"));
       }
 
+      const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+
+      if (!PASSWORD_REGEX.test(password)) {
+        return res.status(400).json(new HttpException(400, `password not valid`));
+      }
+
       const hashPasswordOld = userFound.password;
       const passwordOld = await bcrypt.compare(password, hashPasswordOld);
 
       if (passwordOld) {
-        return res.status(409).json(new HttpException(409, "Password is the same"));
+        return res.status(409).json(new HttpException(409, "Password same as old password"));
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -244,6 +244,11 @@ export const checkUniqueStringResetPassword = async (req: IRequestWithUser, res:
     const userResetData = await userResetPassword.findOne({ user: userFound._id }).exec();
 
     if (!userResetData) return res.status(404).json(new HttpException(404, "User not found"));
+
+    if (userResetData.expiresAt < new Date()) {
+      userResetData.remove();
+      return res.status(400).json(new HttpException(400, "Sory, Link has expired"));
+    }
 
     return res.status(200).json({
       code: 200,

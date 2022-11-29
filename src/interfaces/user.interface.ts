@@ -89,7 +89,6 @@ export default interface IUser {
 
 export interface UserVerification {
   userId: Types.ObjectId;
-  uniqueString: string;
   createdAt: Date;
   expiresAt: Date;
 }

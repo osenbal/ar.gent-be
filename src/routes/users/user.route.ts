@@ -30,6 +30,10 @@ class UserRoute implements Routes {
       .route(`${this.path}uploadfile/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/cv", filterPdf).single("cv"), userController.uploadFile);
 
+    this.router.route(`${this.path}verify/:id`).get(userController.verifyUser);
+
+    this.router.route(`${this.path}check-verify/:id`).get(userController.checkVerified);
+
     // this.router.route(`${this.path}send/reset-password`).post(userController.requestResetPassword);
 
     // this.router.route(`${this.path}reset/password/:userId/:uniqueString`).post(userController.resetPassword);

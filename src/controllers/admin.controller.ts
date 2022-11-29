@@ -6,9 +6,17 @@ import AuthService from "@services/auth.service";
 import jwt from "jsonwebtoken";
 import { IDataStoredInTokenAdmin, IRequestWithAdmin } from "@/interfaces/auth.interface";
 import UserModel from "@/models/User/User.model";
+import JobModel from "@/models/Job.model";
+import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
+import UserResetPasswordModel from "@/models/User/UserResetPassword.model";
+import UserVerificationModel from "@/models/User/UserVerification.model";
 
 const admin = AdminModel;
 const user = UserModel;
+const job = JobModel;
+const userResetPassword = UserResetPasswordModel;
+const UserVerification = UserVerificationModel;
+const applyJobUser = AppliedJobUserModel;
 const authService = new AuthService();
 
 export const createNewAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -178,20 +186,39 @@ export const getCurrentAdmin = async (req: IRequestWithAdmin, res: Response, nex
 
 export const getAllUser = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
   try {
-    const { _id } = req.admin;
     if (req.query.page && req.query.limit) {
-      const { page, limit } = req.query;
+      const page: number = parseInt(req.query.page as string) || 0;
+      const limit: number = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search || "";
+      const offset: number = page * limit;
+      const totalRows = await user
+        .countDocuments({
+          $or: [
+            { username: { $regex: search, $options: "i" } },
+            { fullName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+          ],
+        })
+        .exec();
+      const totalPage = Math.ceil(totalRows / limit);
+      const resultData = await user
+        .find({
+          $or: [
+            { username: { $regex: search, $options: "i" } },
+            { fullName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+          ],
+        })
+        .skip(offset)
+        .limit(limit)
+        .lean()
+        .exec();
 
-      // get user pagination
-      const users = await user
-        .find()
-        .skip((Number(page) - 1) * Number(limit))
-        .limit(Number(limit))
-        .lean();
-
-      if (users) {
+      if (resultData) {
         const total = await user.countDocuments();
-        return res.status(200).json({ code: 200, message: "OK", data: users, total });
+        return res
+          .status(200)
+          .json({ code: 200, message: "OK", data: resultData, ofsset: offset, page, limit, totalRows, totalPage, totalUser: total });
       } else {
         return res.status(404).json(new HttpException(404, "User not found"));
       }
@@ -235,13 +262,15 @@ export const bannedUser = async (req: IRequestWithAdmin, res: Response, next: Ne
 export const deleteUsers = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
   try {
     if (req.body) {
-      // delete array user id
       const { usersId } = req.body;
+      const deleteJobs = await JobModel.deleteMany({ userId: { $in: usersId } });
+      const deleteApplyJobUsers = await applyJobUser.deleteMany({ userId: { $in: usersId } });
+      const deleteUserResetPasswords = await userResetPassword.deleteMany({ userId: { $in: usersId } });
+      const deleteUserVerifications = await UserVerification.deleteMany({ userId: { $in: usersId } });
       const deletedUsers = await user.deleteMany({ _id: { $in: usersId } });
 
-      if (deletedUsers) {
-        const users = await user.find().lean();
-        return res.status(200).json({ code: 200, message: "OK", data: users });
+      if (deletedUsers && deleteJobs && deleteApplyJobUsers && deleteUserResetPasswords && deleteUserVerifications) {
+        return res.status(200).json({ code: 200, message: "OK", data: deletedUsers });
       } else {
         return res.status(500).json(new HttpException(500, "Server error"));
       }

@@ -13,6 +13,7 @@ import { IDataStoredInToken } from "@/interfaces/auth.interface";
 export class MailService {
   transporter = nodemailer.createTransport({
     service: "gmail",
+    secure: true,
     auth: {
       user: AUTH_EMAIL,
       pass: AUTH_PASSWORD,
@@ -20,21 +21,17 @@ export class MailService {
   });
 
   sendEmailVerification = async ({ _id, email }: { _id: Types.ObjectId; email: string }, res: Response) => {
-    const uniqueString = uuidv4() + _id;
-    const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
-
     const mailOptions = {
       from: "ar.gent",
       to: email,
       subject: "[ar.get] Verify your email",
       html: `<p>Verify your email address to complete the signup and login into your account.</p><br />
       <p>This link will <b>expire in 6 hours</b>.</p><br />
-      <p>Press <a href=${CURRENT_URL + "user/verify/" + _id + "/" + uniqueString}>here</a> to process.</p>`,
+      <p>Press <a href=${FRONTEND_URL + "verify/" + _id}>here</a> to process.</p>`,
     };
 
     const newVerification = new UserVerificationModel({
       userId: _id,
-      uniqueString: hashedUniqueString,
       createdAt: Date.now(),
       expiresAt: Date.now() + 21600000, // 6 hours
     });
@@ -46,8 +43,8 @@ export class MailService {
           return res.status(201).json({
             code: 201,
             status: "Pending",
-            userId: _id,
             message: "Verification email sent",
+            userId: _id,
           });
         });
       })
@@ -57,14 +54,11 @@ export class MailService {
   };
 
   sendEmailResetPassword = async ({ _id, email }: { _id: Types.ObjectId; email: string }, res: Response) => {
-    // TODO
-    // const uniqueString = uuidv4() + _id;
     const dataStoredInToken: IDataStoredInToken = {
       _id: _id.toString(),
       role: "user",
     };
 
-    // hash the unique string
     const hashedUniqueString = jwt.sign(dataStoredInToken, process.env.RESET_PASSWORD_KEY, { expiresIn: 1000 * 60 * 10 });
 
     const mailOptions = {
@@ -72,8 +66,8 @@ export class MailService {
       to: email,
       subject: "[ar.get] Reset Password",
       html: `<p>Reset your password</p><br />
-      <p>This link will <b>expire in 1 minutes</b>.</p><br />
-      <p>Press <a href=${CURRENT_URL + "auth/page/reset-password/" + hashedUniqueString}>here</a> to process.</p>`,
+      <p>This link will <b>expire in 10 minutes</b>.</p><br />
+      <p>Press <a href=${FRONTEND_URL + "reset-password/" + hashedUniqueString}>here</a> to process.</p>`,
     };
 
     const objectResetPassword = new UserResetPasswordModel({
