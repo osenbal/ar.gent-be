@@ -1,11 +1,11 @@
-import { Schema, model } from 'mongoose';
-import { IResetPassword } from '@interfaces/user.interface';
+import { Schema, model } from "mongoose";
+import { IResetPassword_User } from "@interfaces/user.interface";
 
-const UserResetPasswordSchema = new Schema<IResetPassword>({
+const UserResetPasswordSchema = new Schema<IResetPassword_User>({
   userId: {
     type: Schema.Types.ObjectId,
     required: true,
-    ref: 'User',
+    ref: "User",
   },
   uniqueString: {
     type: String,
@@ -21,9 +21,6 @@ const UserResetPasswordSchema = new Schema<IResetPassword>({
   },
 });
 
-const UserResetPasswordModel = model<IResetPassword>(
-  'UserResetPassword',
-  UserResetPasswordSchema
-);
+const UserResetPasswordModel = model<IResetPassword_User>("UserResetPassword", UserResetPasswordSchema);
 
 export default UserResetPasswordModel;

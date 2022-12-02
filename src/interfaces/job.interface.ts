@@ -1,3 +1,4 @@
+import { ICity, ICountry, IState } from "country-state-city";
 import { Types } from "mongoose";
 
 export enum EJobType {
@@ -30,6 +31,36 @@ export interface ICategory {
   name: string;
 }
 
+export interface IAddress {
+  country: ICountry;
+  state: IState;
+  city: ICity;
+}
+
+export interface ICreateBody {
+  title: string;
+  description: string;
+  type: EJobType;
+  level: EJobLevel;
+  workPlace: EJobWorkPlace;
+  country: ICountry;
+  state: IState;
+  city: ICity;
+  salary: number;
+}
+
+export interface INewJob {
+  userId: Types.ObjectId;
+  username: string;
+  title: string;
+  description: string;
+  type: EJobType;
+  level: EJobLevel;
+  workPlace: EJobWorkPlace;
+  location: IAddress;
+  salary: number;
+}
+
 export default interface IJob {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
@@ -39,7 +70,7 @@ export default interface IJob {
   type: EJobType;
   level: EJobLevel;
   workPlace: EJobWorkPlace;
-  location: string;
+  location: IAddress;
   salary: number;
   isClosed: boolean;
   createdAt: Date;

@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import Job, { EJobType, EJobLevel, EJobWorkPlace } from "@interfaces/job.interface";
+import Job, { EJobType, EJobLevel, EJobWorkPlace, IAddress } from "@interfaces/job.interface";
 
 const JobSchema: Schema = new Schema({
   userId: {
@@ -34,7 +34,12 @@ const JobSchema: Schema = new Schema({
     enum: Object.values(EJobWorkPlace),
   },
   location: {
-    type: String,
+    default: {
+      country: null,
+      state: null,
+      city: null,
+    },
+    type: Object as () => IAddress,
     required: true,
   },
   salary: {

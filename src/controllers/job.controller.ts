@@ -5,6 +5,9 @@ import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
 import { HttpException } from "@/exceptions/HttpException";
 import { IRequestWithUser } from "@/interfaces/auth.interface";
 import IUser from "@/interfaces/user.interface";
+import mongoose from "mongoose";
+import { City, ICity, ICountry, IState } from "country-state-city";
+import { EJobLevel, EJobType, EJobWorkPlace, IAddress, ICreateBody, INewJob } from "@/interfaces/job.interface";
 
 const job = JobModel;
 const user = UserModel;
@@ -12,11 +15,11 @@ const applyJobUser = AppliedJobUserModel;
 
 export const createJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const { title, description, type, level, workPlace, location, salary } = req.body;
+    const { title, description, type, level, workPlace, city, country, state, salary }: ICreateBody = req.body;
 
     const userId = req.user._id;
 
-    if (!title || !description || !type || !level || !workPlace || !location || !salary || !userId) {
+    if (!title || !description || !type || !level || !workPlace || !city || !country || !state || !salary || !userId) {
       return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
@@ -26,15 +29,21 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
       return res.status(404).json(new HttpException(404, "User not found"));
     }
 
-    const jobObject = {
+    const location: IAddress = {
+      country,
+      state,
+      city,
+    };
+
+    const jobObject: INewJob = {
       userId,
       username: userFound.username,
       title,
       description,
       type,
       level,
-      workPlace,
       location,
+      workPlace,
       salary,
     };
 
@@ -112,29 +121,40 @@ export const getJobById = async (req: IRequestWithUser, res: Response, next: Nex
 export const updateJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
-    const jobFound = await job.findOne({ _id: jobId }).lean();
+    const jobFound = await job.findOne({ _id: jobId }).exec();
 
     if (!jobFound) {
       return res.status(404).json(new HttpException(404, "Job not found"));
     }
+
     const { userId } = jobFound;
+
     if (userId.toString() !== req.user._id.toString()) {
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
-    const { title, description, type, level, workPlace, location, salary } = req.body;
+    // const { title, description, type, level, workPlace, city, country, state, salary }: ICreateBody = req.body;
 
-    const jobObject = {
-      title,
-      description,
-      type,
-      level,
-      workPlace,
-      location,
-      salary,
+    const country: ICountry = req.body.country || jobFound.location.country;
+    const state: IState = req.body.state || jobFound.location.state;
+    const city: ICity = req.body.city || jobFound.location.city;
+
+    const type: EJobType = req.body.type || jobFound.type;
+    const level: EJobLevel = req.body.level || jobFound.level;
+    const workPlace: EJobWorkPlace = req.body.workPlace || jobFound.workPlace;
+
+    jobFound.title = req.body.title || jobFound.title;
+    jobFound.description = req.body.description || jobFound.description;
+    jobFound.type = type || jobFound.type;
+    jobFound.level = level || jobFound.level;
+    jobFound.workPlace = workPlace || jobFound.workPlace;
+    jobFound.location = {
+      country,
+      state,
+      city,
     };
 
-    const updatedJob = await job.findOne({ _id: jobId }).updateOne(jobObject);
+    const updatedJob = await jobFound.updateOne(jobFound).exec();
 
     if (updatedJob) {
       return res.status(200).json({ code: 200, message: "OK", data: "success update" });
@@ -200,23 +220,29 @@ export const handleApplyJob = async (req: IRequestWithUser, res: Response, next:
     const userApply = await applyJobUser.findOne({ userId: req.user._id, jobId }).lean();
 
     if (userApply) {
-      if (userApply.isApprove) {
+      if (userApply.isApprove === "approved") {
         return res.status(400).json(new HttpException(400, "You have already approved in this job"));
       }
 
+      if (userApply.isApprove === "rejected") {
+        return res.status(400).json(new HttpException(400, "You have already rejected in this job"));
+      }
+
       const deletedApplyJob = await applyJobUser.findOne({ userId: req.user._id, jobId }).deleteOne();
+
       if (deletedApplyJob) {
         return res.status(200).json({ code: 200, message: "success unapply", data: false });
       } else {
         return res.status(500).json(new HttpException(500, "Server error"));
       }
     }
-    const applyObject = { userId: req.user._id, jobId };
+
+    const applyObject = { userId: req.user._id, jobId, isApprove: "pending" };
 
     const newApply = await applyJobUser.create(applyObject);
 
     if (newApply) {
-      return res.status(201).json({ code: 201, message: "applied job", data: true });
+      return res.status(201).json({ code: 201, message: "applied job", data: "pending" });
     } else {
       return res.status(400).json(new HttpException(400, "Invalid apply data received"));
     }
@@ -235,17 +261,26 @@ export const checkIsApplied = async (req: IRequestWithUser, res: Response, next:
     }
 
     const { userId } = jobFound;
-    // if (userId.toString() === req.user._id.toString()) {
-    //   return res.status(401).json(new HttpException(401, "Unauthorized"));
-    // }
 
-    const applyJobs = await applyJobUser.find({ userId: req.user._id, jobId }).lean();
-
-    if (applyJobs.length >= 1) {
-      return res.status(200).json({ code: 200, message: "applied", data: true });
+    if (userId.toString() === req.user._id.toString()) {
+      return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
-    return res.status(200).json({ code: 200, message: "not applied", data: false });
+    const applyJobs = await applyJobUser.findOne({ userId: req.user._id, jobId }).lean();
+
+    if (applyJobs) {
+      if (applyJobs.isApprove === "approved") {
+        return res.status(200).json({ code: 200, message: "OK", data: "approved" });
+      }
+
+      if (applyJobs.isApprove === "rejected") {
+        return res.status(200).json({ code: 200, message: "OK", data: "rejected" });
+      }
+
+      return res.status(200).json({ code: 200, message: "applied", data: "pending" });
+    }
+
+    return res.status(200).json({ code: 200, message: "OK", data: false });
   } catch (error) {
     next(error);
   }
@@ -254,6 +289,18 @@ export const checkIsApplied = async (req: IRequestWithUser, res: Response, next:
 export const getAppliciants = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
+    let paneQuery = req.query.pane;
+
+    if (paneQuery === "null" || paneQuery === "undefined") {
+      paneQuery = "pending";
+    }
+
+    if (paneQuery !== "pending" && paneQuery !== "approved" && paneQuery !== "rejected") {
+      return res.status(400).json(new HttpException(400, "Invalid pane query"));
+    }
+
+    console.log("==== pane ====", paneQuery);
+
     const jobFound = await job.findOne({ _id: jobId }).lean();
 
     if (!jobFound) {
@@ -261,6 +308,7 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
     }
 
     const { userId } = jobFound;
+
     if (userId.toString() !== req.user._id.toString()) {
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
@@ -268,13 +316,128 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
     const applyJobs = await applyJobUser.find({ jobId }).lean();
 
     if (applyJobs.length >= 1) {
-      const listUserId = applyJobs.map((item) => item.userId);
-      const usersData = await user.find({ _id: { $in: listUserId } });
+      const usersApplyInJob = await applyJobUser.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $match: {
+            jobId: new mongoose.Types.ObjectId(jobId),
+            isApprove: paneQuery,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            jobId: 1,
+            isApprove: 1,
+            "user._id": 1,
+            "user.username": 1,
+            "user.fullName": 1,
+            "user.email": 1,
+            "user.cv": 1,
+            "user.avatar": 1,
+            "user.createdAt": 1,
+          },
+        },
+      ]);
 
-      return res.status(200).json({ code: 200, message: "OK", data: usersData });
+      return res.status(200).json({ code: 200, message: "OK", data: usersApplyInJob });
     }
 
     return res.status(200).json({ code: 200, message: "OK", data: [] });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleApproveJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const userIdAppliciant = req.params.userId;
+
+    if (!jobId || !userIdAppliciant) {
+      return res.status(400).json(new HttpException(400, "Invalid data received"));
+    }
+
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    const userFound = await user.findOne({ _id: userIdAppliciant }).lean();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, "User not found"));
+    }
+
+    const appliciant = await applyJobUser.findOne({ jobId, userId: userIdAppliciant }).lean();
+
+    if (!appliciant) {
+      return res.status(404).json(new HttpException(404, "Appliciant not found"));
+    }
+
+    if (appliciant.isApprove === "approved") {
+      return res.status(400).json(new HttpException(400, "Appliciant already approved"));
+    }
+
+    const updatedAppliciant = await applyJobUser.findOneAndUpdate({ jobId, userId: userIdAppliciant }, { isApprove: "approved" }, { new: true });
+
+    if (updatedAppliciant) {
+      return res.status(200).json({ code: 200, message: `${userFound.username} has approved`, data: updatedAppliciant });
+    } else {
+      return res.status(500).json(new HttpException(500, "Server error"));
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleRejectJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const jobId = req.params.jobId;
+    const userIdAppliciant = req.params.userId;
+
+    if (!jobId || !userIdAppliciant) {
+      return res.status(400).json(new HttpException(400, "Invalid data received"));
+    }
+
+    const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (!jobFound) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    const userFound = await user.findOne({ _id: userIdAppliciant }).lean();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, "User not found"));
+    }
+
+    const appliciant = await applyJobUser.findOne({ jobId, userId: userIdAppliciant }).lean();
+
+    if (!appliciant) {
+      return res.status(404).json(new HttpException(404, "Appliciant not found"));
+    }
+
+    if (appliciant.isApprove === "rejected") {
+      return res.status(400).json(new HttpException(400, "Appliciant already rejected"));
+    }
+
+    const updatedAppliciant = await applyJobUser.findOneAndUpdate({ jobId, userId: userIdAppliciant }, { isApprove: "rejected" }, { new: true });
+
+    if (updatedAppliciant) {
+      return res.status(200).json({ code: 200, message: `${userFound.username} has rejected`, data: updatedAppliciant });
+    }
+
+    return res.status(500).json(new HttpException(500, "Server error"));
   } catch (error) {
     next(error);
   }

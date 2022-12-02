@@ -1,4 +1,4 @@
-import IUser, { EGender, IAddress, IExperience, IEducation, ICertificate } from "@interfaces/user.interface";
+import IUser, { EGender, IAddress_User, IExperience_User, IEducation_User } from "@interfaces/user.interface";
 import { model, Schema } from "mongoose";
 import { ROLE_USER } from "@config/constant/constant";
 import { CURRENT_URL } from "@/config/config";
@@ -45,12 +45,12 @@ const UserSchema = new Schema<IUser>({
   address: {
     default: {
       street: "",
-      city: "",
-      state: "",
-      country: "",
+      city: null,
+      state: null,
+      country: null,
       zipCode: null,
     },
-    type: Object as () => IAddress,
+    type: Object as () => IAddress_User,
     required: true,
   },
   gender: {
@@ -71,17 +71,14 @@ const UserSchema = new Schema<IUser>({
     default: [],
   },
   education: {
-    type: [Object as () => IEducation],
+    type: [Object as () => IEducation_User],
     default: [],
   },
   experience: {
-    type: [Object as () => IExperience],
+    type: [Object as () => IExperience_User],
     default: [],
   },
-  certificate: {
-    type: [Object as () => ICertificate],
-    default: [],
-  },
+
   portfolioUrl: {
     type: [String],
     default: [],

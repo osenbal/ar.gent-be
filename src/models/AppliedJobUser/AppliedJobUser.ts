@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
-import AppliedJobUser from "@interfaces/appliedJobUser.interface";
+import AppliedJobUser, { EStatusApprove } from "@interfaces/appliedJobUser.interface";
+import { string } from "joi";
 
 const AppliedJobUserSchema: Schema = new Schema({
   userId: {
@@ -11,9 +12,9 @@ const AppliedJobUserSchema: Schema = new Schema({
     required: true,
   },
   isApprove: {
-    type: Boolean,
+    type: String,
     required: true,
-    default: false,
+    enum: Object.values(EStatusApprove),
   },
   createdAt: {
     type: Date,

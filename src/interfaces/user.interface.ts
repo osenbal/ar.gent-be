@@ -1,63 +1,40 @@
 import { Types } from "mongoose";
+import { ICountry, ICity, IState } from "country-state-city";
 
-export enum EGender {
-  MALE = "male",
-  FEMALE = "female",
-  OTHER = "other",
-}
-
-export enum ERole {
-  ADMIN = "admin",
-  USER = "user",
-}
-
-export interface IAddress {
+export interface IAddress_User {
   street: string;
-  city: string;
-  state: string;
-  country: string;
   zipCode: number | null;
+  city: ICity;
+  state: IState;
+  country: ICountry;
 }
-
-export interface IEducation {
+export interface IEducation_User {
   school: string;
   degree: string;
   location: string;
+  currentEducation: boolean;
   startDate: Date;
   endDate: Date | null;
-  currentEducation: boolean;
 }
-
-export interface IExperience {
+export interface IExperience_User {
   company: string;
   position: string;
   isPresent: boolean;
-  startDate: Date;
-  endDate: Date | null;
   description: string;
   location: string;
+  startDate: Date;
+  endDate: Date | null;
 }
 
-export interface ICertificate {
-  title: string; // required
-  urlImage: string; // required
-  licenseNumber: string; //required
-  issueAt: Date;
-  expireAt: Date;
-  description: string;
-  createdAt: Date;
-  updatedAt: Date | null;
-}
-
-export interface IUserRegister {
+export interface IRegister_User {
   avatar: string;
   username: string;
   fullName: string;
   phoneNumber: string;
-  gender: EGender;
-  birthday: Date;
   email: string;
   password: string;
+  gender: EGender;
+  birthday: Date;
 }
 
 export default interface IUser {
@@ -70,33 +47,38 @@ export default interface IUser {
   password: string; // required
   phoneNumber: string; // required
   about: string;
-  birthday: Date; // required
-  address: IAddress; // required
-  gender: EGender; // required
   role: string; // required
   cv: string; // cv url file
   skill: string[];
-  education: IEducation[];
-  experience: IExperience[];
-  certificate: ICertificate[];
   portfolioUrl: string[];
   verified: boolean; // required
   status: boolean; // required
+  birthday: Date; // required
+  address: IAddress_User; // required
+  gender: EGender; // required
+  education: IEducation_User[];
+  experience: IExperience_User[];
   createdAt: Date; // required
   updatedAt: Date | null;
   deletedAt: Date | null;
 }
 
-export interface UserVerification {
+export interface IVerification_User {
   userId: Types.ObjectId;
   createdAt: Date;
   expiresAt: Date;
 }
 
-export interface IResetPassword {
+export interface IResetPassword_User {
   _id: Types.ObjectId;
-  userId: Types.ObjectId;
   uniqueString: string;
+  userId: Types.ObjectId;
   createdAt: Date;
   expiresAt: Date;
+}
+
+export enum EGender {
+  MALE = "male",
+  FEMALE = "female",
+  OTHER = "other",
 }

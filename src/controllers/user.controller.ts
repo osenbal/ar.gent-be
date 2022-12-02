@@ -6,11 +6,9 @@ import UserResetPasswordModel from "@models/User/UserResetPassword.model";
 import AuthService from "@services/auth.service";
 import { HttpException } from "@exceptions/HttpException";
 import { MailService } from "@services/mail.service";
-import { CURRENT_URL } from "@config/config";
-import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
-import { IEducation, IExperience } from "@interfaces/user.interface";
-import { isEmpty } from "@utils/util";
-import jwt from "jsonwebtoken";
+import { IRequestWithUser } from "@interfaces/auth.interface";
+import { IEducation_User, IExperience_User } from "@interfaces/user.interface";
+import { ICountry, IState, ICity } from "country-state-city";
 
 const authService = new AuthService();
 const mailService = new MailService();
@@ -109,9 +107,15 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     // address
     userFound.address.street = req.body.street || userFound.address.street;
-    userFound.address.city = req.body.city;
-    userFound.address.state = req.body.state;
-    userFound.address.country = req.body.country;
+
+    const newCountry: ICountry = req.body.country || userFound.address.country;
+    const newState: IState = req.body.state || userFound.address.state;
+    const newCity: ICity = req.body.city || userFound.address.city;
+
+    userFound.address.country = newCountry;
+    userFound.address.state = newState;
+    userFound.address.city = newCity;
+
     userFound.address.zipCode = req.body.zipCode || userFound.address.zipCode;
 
     console.log("== req body == ", req.body);
@@ -126,11 +130,11 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
       userFound.skill = newSkill;
     }
     if (req.body.education) {
-      const newEducation: IEducation[] = req.body.education;
+      const newEducation: IEducation_User[] = req.body.education;
       userFound.education = newEducation;
     }
     if (req.body.experience) {
-      const newExperience: IExperience[] = req.body.experience;
+      const newExperience: IExperience_User[] = req.body.experience;
       userFound.experience = newExperience;
     }
 

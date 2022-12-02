@@ -2,14 +2,13 @@ import UserModel from "@/models/User/User.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "@config/config";
-import IUser, { IAddress, IUserRegister } from "@interfaces/user.interface";
+import IUser, { IAddress_User, IRegister_User } from "@interfaces/user.interface";
 import { ITokenData, IDataStoredInToken, IDataStoredInTokenAdmin } from "@interfaces/auth.interface";
 import { isEmpty } from "@utils/util";
 import { HttpException } from "@/exceptions/HttpException";
 import IAdmin from "@/interfaces/admin.interface";
 import AdminModel from "@/models/Admin/Admin.model";
 import { MailService } from "./mail.service";
-// import { Request } from "express";
 
 class AuthService {
   private user = UserModel;
