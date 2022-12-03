@@ -1,23 +1,30 @@
 import { NextFunction, Request, Response } from "express";
-import AdminModel from "@/models/Admin/Admin.model";
-import { HttpException } from "@exceptions/HttpException";
 import bcrypt from "bcrypt";
-import AuthService from "@services/auth.service";
 import jwt from "jsonwebtoken";
-import { IDataStoredInTokenAdmin, IRequestWithAdmin } from "@/interfaces/auth.interface";
+import AdminModel from "@/models/Admin/Admin.model";
+import AuthService from "@services/auth.service";
 import UserModel from "@/models/User/User.model";
 import JobModel from "@/models/Job.model";
 import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
 import UserResetPasswordModel from "@/models/User/UserResetPassword.model";
 import UserVerificationModel from "@/models/User/UserVerification.model";
+import { IDataStoredInToken, IRequestWithAdmin } from "@/interfaces/auth.interface";
+import { HttpException } from "@exceptions/HttpException";
+import IAdmin from "@/interfaces/admin.interface";
+
+// --------------------------------------------------------------------------------------------
 
 const admin = AdminModel;
 const user = UserModel;
-const job = JobModel;
 const userResetPassword = UserResetPasswordModel;
-const UserVerification = UserVerificationModel;
+const userVerification = UserVerificationModel;
 const applyJobUser = AppliedJobUserModel;
+
+// --------------------------------------------------------------------------------------------
+
 const authService = new AuthService();
+
+// --------------------------------------------------------------------------------------------
 
 export const createNewAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -103,7 +110,6 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
 
     const { adminAuth } = cookies;
     if (adminAuth) {
-      console.log("adminAuth", adminAuth);
       const verifyToken = await authService.verifyAccessTokenAdmin(adminAuth);
 
       if (verifyToken) {
@@ -115,13 +121,11 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
         return res.status(200).json({ code: 200, message: "OK", data: { _id } });
       }
     }
-    console.log("cookies", cookies);
     if (!cookies?.adminRefreshToken) {
       return res.status(401).json({ code: 401, message: "Unauthorized" });
     }
 
     const adminRefreshToken = cookies.adminRefreshToken;
-    console.log("adminREFRESHtoken :", cookies.adminRefreshToken);
 
     const { refreshTokenData, accessToken } = await authService.refreshAdmin(adminRefreshToken);
 
@@ -140,7 +144,7 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
     });
 
     // get id from access token
-    const { _id } = jwt.decode(accessToken.token) as IDataStoredInTokenAdmin;
+    const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
     res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshTokenData, _id } });
   } catch (error) {
@@ -266,7 +270,7 @@ export const deleteUsers = async (req: IRequestWithAdmin, res: Response, next: N
       const deleteJobs = await JobModel.deleteMany({ userId: { $in: usersId } });
       const deleteApplyJobUsers = await applyJobUser.deleteMany({ userId: { $in: usersId } });
       const deleteUserResetPasswords = await userResetPassword.deleteMany({ userId: { $in: usersId } });
-      const deleteUserVerifications = await UserVerification.deleteMany({ userId: { $in: usersId } });
+      const deleteUserVerifications = await userVerification.deleteMany({ userId: { $in: usersId } });
       const deletedUsers = await user.deleteMany({ _id: { $in: usersId } });
 
       if (deletedUsers && deleteJobs && deleteApplyJobUsers && deleteUserResetPasswords && deleteUserVerifications) {
@@ -290,7 +294,6 @@ export const deleteUserById = async (req: IRequestWithAdmin, res: Response, next
     const userFound = await user.findById(userId).lean();
     if (userFound) {
       const deletedUser = await user.findOneAndDelete({ _id: userId });
-      console.log("deletedUser", deletedUser);
       if (deletedUser) {
         const users = await user.find().lean();
         return res.status(200).json({ code: 200, message: "OK", data: users });

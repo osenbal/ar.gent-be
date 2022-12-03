@@ -299,8 +299,6 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
       return res.status(400).json(new HttpException(400, "Invalid pane query"));
     }
 
-    console.log("==== pane ====", paneQuery);
-
     const jobFound = await job.findOne({ _id: jobId }).lean();
 
     if (!jobFound) {

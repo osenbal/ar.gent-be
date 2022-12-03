@@ -1,20 +1,24 @@
 import UserModel from "@/models/User/User.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "@config/config";
-import IUser, { IAddress_User, IRegister_User } from "@interfaces/user.interface";
-import { ITokenData, IDataStoredInToken, IDataStoredInTokenAdmin } from "@interfaces/auth.interface";
-import { isEmpty } from "@utils/util";
-import { HttpException } from "@/exceptions/HttpException";
-import IAdmin from "@/interfaces/admin.interface";
-import AdminModel from "@/models/Admin/Admin.model";
 import { MailService } from "./mail.service";
+import AdminModel from "@/models/Admin/Admin.model";
+import IUser, { IRegister_User } from "@interfaces/user.interface";
+import IAdmin from "@/interfaces/admin.interface";
+import { ITokenData, IDataStoredInToken } from "@interfaces/auth.interface";
+import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "@config/config";
+import { HttpException } from "@/exceptions/HttpException";
+import { isEmpty } from "@utils/util";
+
+// ----------------------------------------------------------------------------------------------
 
 class AuthService {
+  // --- Attribute ---
   private user = UserModel;
   private admin = AdminModel;
   private mailService = new MailService();
 
+  // ------ Public Method for user ---------------
   public async register(req, res, newUser, avatar) {
     if (isEmpty(newUser)) throw new HttpException(400, "Bad request");
     if (isEmpty(avatar)) throw new HttpException(400, "Bad request");
@@ -25,30 +29,32 @@ class AuthService {
       throw new HttpException(400, "Bad request");
     }
 
+    // check email exist
     const findUser = await this.user
       .findOne({
         email: newUser.email,
       })
       .lean()
       .exec();
-
     if (findUser) throw new HttpException(409, `This email ${newUser.email} already exists`);
 
+    // check username exist
     const duplicateUsername = await this.user.findOne({ username: newUser.username }).lean().exec();
-
     if (duplicateUsername) {
       throw new HttpException(409, `This username ${newUser.username} already exists`);
     }
 
+    // password regex check
     const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-
     if (!PASSWORD_REGEX.test(password)) {
       throw new HttpException(400, `password not valid`);
     }
 
+    // hash password
     const hashedPassword = await bcrypt.hash(newUser.password, 10);
 
-    const newUserObject = new this.user({
+    // create new user
+    const objNewUser: IRegister_User = {
       avatar: req.protocol + "://" + req.get("host") + "/" + avatar,
       username: newUser.username,
       fullName: newUser.fullName,
@@ -57,8 +63,8 @@ class AuthService {
       birthday: new Date(newUser.birthday),
       email: newUser.email,
       password: hashedPassword,
-    });
-
+    };
+    const newUserObject = new this.user(objNewUser);
     newUserObject.save((err) => {
       if (err) return res.status(500).json(new HttpException(500, "Internal server error"));
     });
@@ -115,7 +121,6 @@ class AuthService {
   public createToken(userData: IUser): ITokenData {
     const dataStoredInToken: IDataStoredInToken = {
       _id: userData._id.toString(),
-      role: userData.role,
     };
 
     const secretKey: string = ACCESS_TOKEN_SECRET;
@@ -131,7 +136,6 @@ class AuthService {
   public createRefreshToken(user: IUser): ITokenData {
     const dataStoredInToken: IDataStoredInToken = {
       _id: user._id.toString(),
-      role: user.role,
     };
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
@@ -155,7 +159,7 @@ class AuthService {
 
   // ---- Admin auth service ---------------
   public createTokenAdmin(admin: IAdmin): ITokenData {
-    const dataStoredInToken: IDataStoredInTokenAdmin = {
+    const dataStoredInToken: IDataStoredInToken = {
       _id: admin._id.toString(),
     };
 
@@ -170,7 +174,7 @@ class AuthService {
   }
 
   public createRefreshTokenAdmin(admin: IAdmin): ITokenData {
-    const dataStoredInToken: IDataStoredInTokenAdmin = {
+    const dataStoredInToken: IDataStoredInToken = {
       _id: admin._id.toString(),
     };
 
@@ -218,9 +222,9 @@ class AuthService {
     return { refreshTokenData, accessToken };
   }
 
-  public verifyAccessTokenAdmin(token: string): IDataStoredInTokenAdmin {
+  public verifyAccessTokenAdmin(token: string): IDataStoredInToken {
     const secretKey: string = ACCESS_TOKEN_SECRET;
-    return jwt.verify(token, secretKey) as IDataStoredInTokenAdmin;
+    return jwt.verify(token, secretKey) as IDataStoredInToken;
   }
 }
 

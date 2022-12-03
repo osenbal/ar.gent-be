@@ -4,11 +4,6 @@ import IAdmin from "./admin.interface";
 
 export interface IDataStoredInToken {
   _id: string;
-  role: string;
-}
-
-export interface IDataStoredInTokenAdmin {
-  _id: string;
 }
 
 export interface ITokenData {

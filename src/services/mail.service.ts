@@ -56,7 +56,6 @@ export class MailService {
   sendEmailResetPassword = async ({ _id, email }: { _id: Types.ObjectId; email: string }, res: Response) => {
     const dataStoredInToken: IDataStoredInToken = {
       _id: _id.toString(),
-      role: "user",
     };
 
     const hashedUniqueString = jwt.sign(dataStoredInToken, process.env.RESET_PASSWORD_KEY, { expiresIn: 1000 * 60 * 10 });

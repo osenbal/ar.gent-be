@@ -13,7 +13,7 @@ import {
   handleApproveJob,
   handleRejectJob,
 } from "@controllers/job.controller";
-import { authPolicyMiddleware, authRoleAndPolicyMiddleware, authRoleMiddleware } from "@middlewares/authRole.middleware";
+import { authPolicyMiddleware } from "@middlewares/authRole.middleware";
 import authMiddleware from "@middlewares/auth.middleware";
 
 class JobRoute implements Routes {

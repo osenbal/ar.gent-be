@@ -7,7 +7,7 @@ import AuthService from "@services/auth.service";
 import { HttpException } from "@exceptions/HttpException";
 import { MailService } from "@services/mail.service";
 import { IRequestWithUser } from "@interfaces/auth.interface";
-import { IEducation_User, IExperience_User } from "@interfaces/user.interface";
+import IUser, { IEducation_User, IExperience_User } from "@interfaces/user.interface";
 import { ICountry, IState, ICity } from "country-state-city";
 
 const authService = new AuthService();
@@ -35,7 +35,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
         sameSite: "none",
         maxAge: accessToken.expiresIn,
       });
-
+      // set cookie refresh token
       res.cookie("refreshToken", refreshToken.token, {
         secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
         httpOnly: true,
@@ -57,7 +57,11 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 // @access Private
 export const getCurrentUser = (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    return res.status(200).json({ code: 200, message: "OK", data: req.user });
+    const currentUser: IUser = req.user;
+    if (!currentUser) {
+      return res.status(404).json(new HttpException(404, "User Not Found"));
+    }
+    return res.status(200).json({ code: 200, message: "OK", data: currentUser });
   } catch (error) {
     next(error);
   }
@@ -72,7 +76,7 @@ export const getUserById = async (req: IRequestWithUser, res: Response, next: Ne
 
     if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    const userFound = await user.findById(id).select("-password").lean().exec();
+    const userFound: IUser = await user.findById(id).select("-password").lean().exec();
 
     if (userFound) {
       return res.status(200).json({ code: 200, message: "OK", data: userFound });
@@ -118,8 +122,6 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
 
     userFound.address.zipCode = req.body.zipCode || userFound.address.zipCode;
 
-    console.log("== req body == ", req.body);
-
     // portfolio and etc
     if (req.body.portfolioUrl) {
       const newPortfolio: string[] = req.body.portfolioUrl;
@@ -159,7 +161,6 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
     }
 
     const updatedUser = await userFound.update(userFound).exec();
-    console.log("== updated user == ", updatedUser);
     return res.status(200).json({
       code: 200,
       message: `success update profile`,

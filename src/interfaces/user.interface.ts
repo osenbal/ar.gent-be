@@ -47,7 +47,6 @@ export default interface IUser {
   password: string; // required
   phoneNumber: string; // required
   about: string;
-  role: string; // required
   cv: string; // cv url file
   skill: string[];
   portfolioUrl: string[];
@@ -68,7 +67,6 @@ export interface IVerification_User {
   createdAt: Date;
   expiresAt: Date;
 }
-
 export interface IResetPassword_User {
   _id: Types.ObjectId;
   uniqueString: string;

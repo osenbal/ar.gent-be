@@ -1,6 +1,5 @@
 import IUser, { EGender, IAddress_User, IExperience_User, IEducation_User } from "@interfaces/user.interface";
 import { model, Schema } from "mongoose";
-import { ROLE_USER } from "@config/constant/constant";
 import { CURRENT_URL } from "@/config/config";
 
 const UserSchema = new Schema<IUser>({
@@ -58,10 +57,7 @@ const UserSchema = new Schema<IUser>({
     enum: Object.values(EGender),
     required: true,
   },
-  role: {
-    type: String,
-    default: ROLE_USER,
-  },
+
   cv: {
     type: String,
     default: "",

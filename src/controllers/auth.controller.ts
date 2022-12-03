@@ -21,8 +21,6 @@ const userResetPassword = UserResetPasswordModel;
 // @access Public
 export const logIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(JSON.stringify(process.env.NODE_ENV) == JSON.stringify("developmentBackend"));
-    console.log(process.env.NODE_ENV);
     const userData = req.body;
     const { refreshTokenData, accessToken, userId } = await authService.login(userData);
 
