@@ -440,3 +440,59 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
     next(error);
   }
 };
+
+export const getApplicationsUser = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!userId) {
+      return res.status(400).json(new HttpException(400, "Bad Request"));
+    }
+
+    const userFound = await user.findById(userId).lean();
+
+    if (!userFound) {
+      return res.status(404).json(new HttpException(404, "User Not Found"));
+    }
+
+    const userApplications = await applyJobUser.find({ userId }).lean().exec();
+
+    if (!userApplications) {
+      return res.status(200).json({ code: 200, message: "OK", data: [] });
+    }
+
+    const JobJoinUserAppliciants = await applyJobUser.aggregate([
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          jobId: 1,
+          isApprove: 1,
+          createdAt: 1,
+          "job._id": 1,
+          "job.title": 1,
+          "job.location": 1,
+        },
+      },
+    ]);
+
+    if (JobJoinUserAppliciants) {
+      return res.status(200).json({ code: 200, message: "OK", data: JobJoinUserAppliciants });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
