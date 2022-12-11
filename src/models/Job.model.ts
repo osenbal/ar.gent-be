@@ -6,10 +6,6 @@ const JobSchema: Schema = new Schema({
     type: Types.ObjectId,
     required: true,
   },
-  username: {
-    type: String,
-    required: true,
-  },
   title: {
     type: String,
     required: true,

@@ -13,6 +13,7 @@ import {
   handleApproveJob,
   handleRejectJob,
   getApplicationsUser,
+  getNearlyJobs,
 } from "@controllers/job.controller";
 import { authPolicyMiddleware } from "@middlewares/authRole.middleware";
 import authMiddleware from "@middlewares/auth.middleware";
@@ -29,6 +30,8 @@ class JobRoute implements Routes {
     this.router.route(`${this.path}`).get(authMiddleware, getAllJob);
 
     this.router.route(`${this.path}`).post(authMiddleware, createJob);
+
+    this.router.route(`${this.path}nearly`).get(authMiddleware, getNearlyJobs);
 
     this.router.route(`${this.path}:jobId`).get(authMiddleware, getJobById);
 

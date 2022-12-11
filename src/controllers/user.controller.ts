@@ -102,7 +102,7 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
     if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
     // profile information
-    userFound.username = req.body.username || userFound.username;
+    // userFound.username = req.body.username || userFound.username;
     userFound.fullName = req.body.fullName || userFound.fullName;
     userFound.about = req.body.about || userFound.about;
     userFound.phoneNumber = req.body.phoneNumber || userFound.phoneNumber;
@@ -160,6 +160,8 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
       userFound.email = req.body.email;
     }
 
+    userFound.updatedAt = new Date();
+
     const updatedUser = await userFound.update(userFound).exec();
     return res.status(200).json({
       code: 200,
@@ -199,6 +201,7 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
 
       userFound.avatar = req.protocol + "://" + req.get("host") + "/" + imagePath;
 
+      userFound.updatedAt = new Date();
       const updatedUser = await userFound.save();
 
       return res.status(200).json({
@@ -222,6 +225,8 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
       }
 
       userFound.banner = req.protocol + "://" + req.get("host") + "/" + imagePath;
+
+      userFound.updatedAt = new Date();
 
       const updatedUser = await userFound.save();
 
@@ -261,6 +266,8 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
       }
 
       userFound.cv = req.protocol + "://" + req.get("host") + "/" + cvPath;
+
+      userFound.updatedAt = new Date();
 
       const updatedUser = await userFound.save();
 
@@ -314,20 +321,30 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const checkVerified = async (req: Request, res: Response, next: NextFunction) => {
+export const sendVerifyCode = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
-    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
+    const { _id } = req.user;
+    if (!_id) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    const userFound = await user.findById(id).exec();
+    const userFound = await user.findById(_id).exec();
 
     if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
-    if (userFound.verified) {
-      return res.status(200).json({ code: 200, message: "User verified", data: true });
-    } else {
-      return res.status(400).json(new HttpException(400, "User not verified"));
+    const userVerify = await userVerification
+      .findOne({
+        userId: _id,
+      })
+      .exec();
+
+    if (userVerify) {
+      if (userVerify.expiresAt > new Date()) {
+        return res.status(409).json(new HttpException(409, "Verification code already sent, check your inbox or spam folder"));
+      } else {
+        userVerify.remove();
+      }
     }
+
+    return await mailService.sendEmailVerification(userFound, res);
   } catch (error) {
     next(error);
   }

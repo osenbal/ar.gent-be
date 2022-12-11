@@ -51,7 +51,6 @@ export interface ICreateBody {
 
 export interface INewJob {
   userId: Types.ObjectId;
-  username: string;
   title: string;
   description: string;
   type: EJobType;
@@ -64,7 +63,6 @@ export interface INewJob {
 export default interface IJob {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
-  username: string;
   title: string;
   description: string;
   type: EJobType;

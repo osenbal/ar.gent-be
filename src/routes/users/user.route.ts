@@ -4,6 +4,7 @@ import authMiddleware from "@middlewares/auth.middleware";
 import uploadStorage, { filterImage, filterPdf } from "@middlewares/storage.middleware";
 import * as userController from "@controllers/user.controller";
 import { authPolicyMiddleware } from "@middlewares/authRole.middleware";
+import limiterMiddleware from "@/middlewares/limiter.midleware";
 
 class UserRoute implements Routes {
   public path = "/user/";
@@ -30,9 +31,16 @@ class UserRoute implements Routes {
       .route(`${this.path}uploadfile/:id`)
       .put(authMiddleware, authPolicyMiddleware, uploadStorage("profile/cv", filterPdf).single("cv"), userController.uploadFile);
 
-    this.router.route(`${this.path}verify/:id`).get(userController.verifyUser);
+    this.router
+      .route(`${this.path}send-verify/:id`)
+      .post(
+        authMiddleware,
+        authPolicyMiddleware,
+        limiterMiddleware("to many request please wait for 15 minutes", 5, 1000 * 60 * 15),
+        userController.sendVerifyCode
+      );
 
-    this.router.route(`${this.path}check-verify/:id`).get(userController.checkVerified);
+    this.router.route(`${this.path}verify/:id`).get(userController.verifyUser);
 
     // this.router.route(`${this.path}send/reset-password`).post(userController.requestResetPassword);
 

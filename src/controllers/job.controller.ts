@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import JobModel from "@models/Job.model";
 import UserModel from "@/models/User/User.model";
+import { MailService } from "@/services/mail.service";
 import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
 import { HttpException } from "@/exceptions/HttpException";
 import { IRequestWithUser } from "@/interfaces/auth.interface";
@@ -12,6 +13,8 @@ import { EJobLevel, EJobType, EJobWorkPlace, IAddress, ICreateBody, INewJob } fr
 const job = JobModel;
 const user = UserModel;
 const applyJobUser = AppliedJobUserModel;
+
+const mailService = new MailService();
 
 export const createJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
@@ -34,10 +37,10 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
       state,
       city,
     };
+    console.log(location);
 
     const jobObject: INewJob = {
       userId,
-      username: userFound.username,
       title,
       description,
       type,
@@ -61,30 +64,87 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
 
 export const getAllJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    if (req.query.page && req.query.limit) {
-      const { page, limit } = req.query;
+    const search: string = (req.query.search as string) || "";
 
-      const jobs = await job
-        .find()
-        .skip((Number(page) - 1) * Number(limit))
-        .limit(Number(limit))
-        .lean();
+    const optionTypes = Object.values(EJobType).map((value: string) => value);
+    const optionLevels = Object.values(EJobLevel).map((value: string) => value);
+    const optionWorkPlace = Object.values(EJobWorkPlace).map((value: string) => value);
 
-      if (jobs) {
-        const total = await job.countDocuments();
-        return res.status(200).json({ code: 200, message: "OK", data: jobs, total });
-      } else {
-        return res.status(404).json(new HttpException(404, "No job found"));
-      }
-    } else {
-      const jobs = await job.find().lean();
-
-      if (jobs) {
-        return res.status(200).json({ code: 200, message: "OK", data: jobs });
-      } else {
-        return res.status(404).json(new HttpException(404, "No job found"));
-      }
+    let workplace: string = (req.query.workplace as string) || "";
+    let type: string = (req.query.type as string) || "";
+    let level: string = (req.query.level as string) || "";
+    if (workplace && !optionWorkPlace.includes(workplace)) {
+      workplace = "";
     }
+    if (type && !optionTypes.includes(type)) {
+      type = "";
+    }
+    if (level && !optionLevels.includes(level)) {
+      level = "";
+    }
+
+    const page: number = parseInt(req.query.page as string) || 0;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const offset: number = page * limit;
+    const totalRows = await job
+      .countDocuments({
+        $and: [
+          { title: { $regex: search, $options: "i" } },
+          {
+            workPlace: { $regex: workplace, $options: "i" },
+            type: { $regex: type, $options: "i" },
+            level: { $regex: level, $options: "i" },
+          },
+        ],
+      })
+      .exec();
+    const totalPage = Math.ceil(totalRows / limit);
+
+    const result = await job
+      .aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $unwind: "$user",
+        },
+        {
+          $match: {
+            $and: [
+              { title: { $regex: search, $options: "i" } },
+              { workPlace: { $regex: workplace, $options: "i" }, type: { $regex: type, $options: "i" }, level: { $regex: level, $options: "i" } },
+            ],
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            location: 1,
+            salary: 1,
+            createdAt: 1,
+            user: {
+              _id: 1,
+              username: 1,
+              fullName: 1,
+            },
+          },
+        },
+      ])
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    if (!result) {
+      return res.status(200).json({ code: 200, message: "OK", data: [], ofsset: offset, page, limit, totalRows, totalPage });
+    }
+
+    return res.status(200).json({ code: 200, message: "OK", data: result, ofsset: offset, page, limit, totalRows, totalPage });
   } catch (error) {
     next(error);
   }
@@ -93,7 +153,38 @@ export const getAllJob = async (req: IRequestWithUser, res: Response, next: Next
 export const getJobByUserId = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const userId = req.params.userId;
-    const jobs = await job.find({ userId }).lean();
+    const jobs = await job.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          location: 1,
+          salary: 1,
+          user: {
+            _id: 1,
+            username: 1,
+            fullName: 1,
+          },
+        },
+      },
+    ]);
+
     return res.status(200).json({ code: 200, message: "OK", data: jobs });
   } catch (error) {
     next(error);
@@ -103,16 +194,70 @@ export const getJobByUserId = async (req: IRequestWithUser, res: Response, next:
 export const getJobById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
-    const jobFound = await job.findOne({ _id: jobId }).lean();
 
-    if (!jobFound) {
+    if (!jobId) {
+      return res.status(400).json(new HttpException(400, "Bad Request"));
+    }
+
+    const jobFound = await job.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $lookup: {
+          from: "appliedjobusers",
+          localField: "_id",
+          foreignField: "jobId",
+          as: "applied",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(jobId),
+        },
+      },
+      {
+        $limit: 1,
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          title: 1,
+          description: 1,
+          type: 1,
+          level: 1,
+          location: 1,
+          workPlace: 1,
+          salary: 1,
+          isClosed: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          deletedAt: 1,
+          totalAppliciants: { $size: "$applied" },
+          user: {
+            _id: 1,
+            username: 1,
+            fullName: 1,
+            avatar: 1,
+          },
+        },
+      },
+    ]);
+
+    if (!jobFound || jobFound.length === 0) {
       return res.status(404).json(new HttpException(404, "Job not found"));
     }
 
-    const { userId } = jobFound;
-    const dataUser: IUser = await user.findOne({ _id: userId }).lean();
-
-    return res.status(200).json({ code: 200, message: "OK", data: { ...jobFound, avatarUser: dataUser.avatar } });
+    return res.status(200).json({ code: 200, message: "OK", data: jobFound[0] });
   } catch (error) {
     next(error);
   }
@@ -133,8 +278,6 @@ export const updateJob = async (req: IRequestWithUser, res: Response, next: Next
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
-    // const { title, description, type, level, workPlace, city, country, state, salary }: ICreateBody = req.body;
-
     const country: ICountry = req.body.country || jobFound.location.country;
     const state: IState = req.body.state || jobFound.location.state;
     const city: ICity = req.body.city || jobFound.location.city;
@@ -153,6 +296,9 @@ export const updateJob = async (req: IRequestWithUser, res: Response, next: Next
       state,
       city,
     };
+
+    jobFound.salary = req.body.salary || jobFound.salary;
+    jobFound.updatedAt = new Date();
 
     const updatedJob = await jobFound.updateOne(jobFound).exec();
 
@@ -174,9 +320,12 @@ export const deleteJobById = async (req: IRequestWithUser, res: Response, next: 
     }
 
     const { userId } = jobFound;
+
     if (userId.toString() !== req.user._id.toString()) {
       return res.status(401).json(new HttpException(401, "Unauthorized tet"));
     }
+
+    const deleteUserAppliciant = await applyJobUser.deleteMany({ jobId: new mongoose.Types.ObjectId(jobId) }).exec();
 
     const deletedJob = await job.findOne({ _id: jobId }).deleteOne();
 
@@ -198,6 +347,7 @@ export const handleApplyJob = async (req: IRequestWithUser, res: Response, next:
     }
 
     const { userId } = jobFound;
+
     if (userId.toString() === req.user._id.toString()) {
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
@@ -330,18 +480,24 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
           },
         },
         {
+          $unwind: "$user",
+        },
+        {
           $project: {
             _id: 1,
             userId: 1,
             jobId: 1,
             isApprove: 1,
-            "user._id": 1,
-            "user.username": 1,
-            "user.fullName": 1,
-            "user.email": 1,
-            "user.cv": 1,
-            "user.avatar": 1,
-            "user.createdAt": 1,
+            createdAt: 1,
+            user: {
+              _id: 1,
+              username: 1,
+              fullName: 1,
+              email: 1,
+              avatar: 1,
+              cv: 1,
+              createdAt: 1,
+            },
           },
         },
       ]);
@@ -359,9 +515,14 @@ export const handleApproveJob = async (req: IRequestWithUser, res: Response, nex
   try {
     const jobId = req.params.jobId;
     const userIdAppliciant = req.params.userId;
+    let message: string = req.body.message;
 
     if (!jobId || !userIdAppliciant) {
       return res.status(400).json(new HttpException(400, "Invalid data received"));
+    }
+
+    if (!message) {
+      message = "please wait for further information";
     }
 
     const jobFound = await job.findOne({ _id: jobId }).lean();
@@ -369,6 +530,8 @@ export const handleApproveJob = async (req: IRequestWithUser, res: Response, nex
     if (!jobFound) {
       return res.status(404).json(new HttpException(404, "Job not found"));
     }
+
+    const userCreatedJob = await user.findOne({ _id: jobFound.userId }).lean();
 
     const userFound = await user.findOne({ _id: userIdAppliciant }).lean();
 
@@ -389,7 +552,8 @@ export const handleApproveJob = async (req: IRequestWithUser, res: Response, nex
     const updatedAppliciant = await applyJobUser.findOneAndUpdate({ jobId, userId: userIdAppliciant }, { isApprove: "approved" }, { new: true });
 
     if (updatedAppliciant) {
-      return res.status(200).json({ code: 200, message: `${userFound.username} has approved`, data: updatedAppliciant });
+      return mailService.sendEmailApproveJob(userFound.email, message, jobFound, userCreatedJob, res);
+      // return res.status(200).json({ code: 200, message: `${userFound.username} has approved`, data: updatedAppliciant });
     } else {
       return res.status(500).json(new HttpException(500, "Server error"));
     }
@@ -402,6 +566,11 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
   try {
     const jobId = req.params.jobId;
     const userIdAppliciant = req.params.userId;
+    let message: string = req.body.message;
+
+    if (!message) {
+      message = "Sorry, you are not qualified for this job position";
+    }
 
     if (!jobId || !userIdAppliciant) {
       return res.status(400).json(new HttpException(400, "Invalid data received"));
@@ -414,6 +583,7 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
     }
 
     const userFound = await user.findOne({ _id: userIdAppliciant }).lean();
+    const userCreatedJob = await user.findOne({ _id: jobFound.userId }).lean();
 
     if (!userFound) {
       return res.status(404).json(new HttpException(404, "User not found"));
@@ -432,7 +602,8 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
     const updatedAppliciant = await applyJobUser.findOneAndUpdate({ jobId, userId: userIdAppliciant }, { isApprove: "rejected" }, { new: true });
 
     if (updatedAppliciant) {
-      return res.status(200).json({ code: 200, message: `${userFound.username} has rejected`, data: updatedAppliciant });
+      return mailService.sendEmailRejectJob(userFound.email, message, jobFound, userCreatedJob, res);
+      // return res.status(200).json({ code: 200, message: `${userFound.username} has rejected`, data: updatedAppliciant });
     }
 
     return res.status(500).json(new HttpException(500, "Server error"));
@@ -453,12 +624,6 @@ export const getApplicationsUser = async (req: IRequestWithUser, res: Response, 
 
     if (!userFound) {
       return res.status(404).json(new HttpException(404, "User Not Found"));
-    }
-
-    const userApplications = await applyJobUser.find({ userId }).lean().exec();
-
-    if (!userApplications) {
-      return res.status(200).json({ code: 200, message: "OK", data: [] });
     }
 
     const JobJoinUserAppliciants = await applyJobUser.aggregate([
@@ -492,6 +657,62 @@ export const getApplicationsUser = async (req: IRequestWithUser, res: Response, 
     if (JobJoinUserAppliciants) {
       return res.status(200).json({ code: 200, message: "OK", data: JobJoinUserAppliciants });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const user: IUser = req.user;
+    const page: number = parseInt(req.query.page as string) || 0;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const offset: number = page * limit;
+    const totalRows = await job
+      .countDocuments({
+        $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+      })
+      .exec();
+    const totalPage = Math.ceil(totalRows / limit);
+
+    const result = await job
+      .aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $unwind: "$user",
+        },
+        {
+          $match: {
+            $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            location: 1,
+            salary: 1,
+            createdAt: 1,
+            user: {
+              _id: 1,
+              username: 1,
+              fullName: 1,
+            },
+          },
+        },
+      ])
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    return res.status(200).json({ code: 200, message: "OK", data: result, ofsset: offset, page, limit, totalRows, totalPage });
   } catch (error) {
     next(error);
   }

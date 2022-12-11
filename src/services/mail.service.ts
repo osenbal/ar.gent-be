@@ -9,6 +9,8 @@ import { Response } from "express";
 import UserResetPasswordModel from "@/models/User/UserResetPassword.model";
 import jwt from "jsonwebtoken";
 import { IDataStoredInToken } from "@/interfaces/auth.interface";
+import IJob from "@/interfaces/job.interface";
+import IUser from "@/interfaces/user.interface";
 
 export class MailService {
   transporter = nodemailer.createTransport({
@@ -26,14 +28,14 @@ export class MailService {
       to: email,
       subject: "[ar.get] Verify your email",
       html: `<p>Verify your email address to complete the signup and login into your account.</p><br />
-      <p>This link will <b>expire in 6 hours</b>.</p><br />
+      <p>This link will <b>expire in 5 minutes</b>.</p><br />
       <p>Press <a href=${FRONTEND_URL + "verify/" + _id}>here</a> to process.</p>`,
     };
 
     const newVerification = new UserVerificationModel({
       userId: _id,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 21600000, // 6 hours
+      expiresAt: Date.now() + 1000 * 60 * 5, // 5 minutes
     });
 
     newVerification
@@ -43,7 +45,7 @@ export class MailService {
           return res.status(201).json({
             code: 201,
             status: "Pending",
-            message: "Verification email sent",
+            message: "Verification email has sent",
             userId: _id,
           });
         });
@@ -86,6 +88,69 @@ export class MailService {
             message: "Link Reset password has been sent to your email",
             uniqueString: hashedUniqueString,
           });
+        });
+      })
+      .catch((err) => {
+        return res.status(400).json(new HttpException(400, "Email failed to send"));
+      });
+  };
+
+  sendEmailApproveJob = async (email: string, message: string, jobData: IJob, userCreatedJob: IUser, res: Response) => {
+    const mailOptions = {
+      from: "ar.gent",
+      to: email,
+      subject: "[ar.get] Congratulation your job has been approved",
+      html: `<p>You approved for this job | ${jobData.title}</p><br />
+      <p>${message}</p><br />
+
+      <p>Contact for this job:</p>
+      <p>Name: ${userCreatedJob.fullName}</p>
+      <p>Email: ${userCreatedJob.email}</p>
+      <p>Phone: ${userCreatedJob.phoneNumber}</p><br />
+
+      <p>Best regards,</p>
+      <p>ar.get team</p>
+      `,
+    };
+
+    this.transporter
+      .sendMail(mailOptions)
+      .then(() => {
+        return res.status(201).json({
+          code: 200,
+          status: "success",
+          message: `User with ${email} has been approved`,
+        });
+      })
+      .catch((err) => {
+        return res.status(400).json(new HttpException(400, "Email failed to send"));
+      });
+  };
+
+  sendEmailRejectJob = async (email: string, message: string, jobData: IJob, userCreatedJob: IUser, res: Response) => {
+    const mailOptions = {
+      from: "ar.gent",
+      to: email,
+      subject: "[ar.get] Sorry your appliciant has been rejected",
+      html: `<p>You rejected for this job | ${jobData.title}</p><br />
+      <p>${message}</p><br />
+      <p>Contact for this job:</p>
+      <p>Name: ${userCreatedJob.fullName}</p>
+      <p>Email: ${userCreatedJob.email}</p>
+      <p>Phone: ${userCreatedJob.phoneNumber}</p><br />
+
+      <p>Best regards,</p>
+      <p>ar.get team</p>
+      `,
+    };
+
+    this.transporter
+      .sendMail(mailOptions)
+      .then(() => {
+        return res.status(201).json({
+          code: 200,
+          status: "success",
+          message: `User with ${email} has been rejected`,
         });
       })
       .catch((err) => {
