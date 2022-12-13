@@ -1,20 +1,21 @@
 import { Request, Response, NextFunction } from "express";
-import AuthService from "@services/auth.service";
-import { HttpException } from "@exceptions/HttpException";
-import UserVerificationModel from "@models/User/UserVerification.model";
-import UserResetPasswordModel from "@models/User/UserResetPassword.model";
-import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
-import UserModel from "@/models/User/User.model";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import AuthService from "@services/auth.service";
 import { MailService } from "@services/mail.service";
+import UserResetPasswordModel from "@models/User/UserResetPassword.model";
+import UserModel from "@/models/User/User.model";
 import { CURRENT_URL } from "@/config/config";
+import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
+import { HttpException } from "@exceptions/HttpException";
 
+// -------------------------------------------------------
 //  @desc initialized object AuthService
 const authService = new AuthService();
 const mailService = new MailService();
 const user = UserModel;
 const userResetPassword = UserResetPasswordModel;
+// -------------------------------------------------------
 
 // @desc Login user
 // @route POST /auth/login
@@ -225,6 +226,9 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+// @desc Reset password
+// @route POST /aurh/reset-password/check/:uniqueString
+// @access Private
 export const checkUniqueStringResetPassword = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { uniqueString } = req.params;

@@ -7,7 +7,9 @@ production
 build
 build/release
 
-
+# public directory
+public/uploads/profile/avatar/*
+public/uploads/profile/cv/*
 
 # Cache
 cache

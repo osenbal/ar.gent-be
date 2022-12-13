@@ -1,10 +1,10 @@
+import { Response, NextFunction } from "express";
 import { verify } from "jsonwebtoken";
 import UserModel from "@/models/User/User.model";
-import { IDataStoredInToken } from "@interfaces/auth.interface";
-import { Response, NextFunction } from "express";
-import { IRequestWithUser } from "@interfaces/auth.interface";
 import { HttpException } from "@exceptions/HttpException";
 import { ACCESS_TOKEN_SECRET } from "@config/config";
+import { IDataStoredInToken } from "@interfaces/auth.interface";
+import { IRequestWithUser } from "@interfaces/auth.interface";
 
 const authMiddleware = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {

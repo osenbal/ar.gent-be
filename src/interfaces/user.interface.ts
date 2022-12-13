@@ -75,6 +75,21 @@ export interface IResetPassword_User {
   expiresAt: Date;
 }
 
+export interface INewReport_User {
+  userReportedId: Types.ObjectId;
+  userReportById: Types.ObjectId;
+  description: string;
+}
+
+export interface IReport_User {
+  _id: Types.ObjectId;
+  userReportedId: Types.ObjectId;
+  userReportById: Types.ObjectId;
+  description: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+}
+
 export enum EGender {
   MALE = "male",
   FEMALE = "female",

@@ -1,20 +1,24 @@
 import { NextFunction, Request, Response } from "express";
-import bcrypt from "bcrypt";
+import { Types } from "mongoose";
 import UserModel from "@models/User/User.model";
 import UserVerificationModel from "@models/User/UserVerification.model";
 import UserResetPasswordModel from "@models/User/UserResetPassword.model";
+import UserReportModel from "@/models/User/UserReport.model";
 import AuthService from "@services/auth.service";
 import { HttpException } from "@exceptions/HttpException";
 import { MailService } from "@services/mail.service";
 import { IRequestWithUser } from "@interfaces/auth.interface";
-import IUser, { IEducation_User, IExperience_User } from "@interfaces/user.interface";
+import IUser, { IEducation_User, IExperience_User, INewReport_User } from "@interfaces/user.interface";
 import { ICountry, IState, ICity } from "country-state-city";
 
+// ---------------------------------------------------------------------------
 const authService = new AuthService();
 const mailService = new MailService();
 const userResetPassword = UserResetPasswordModel;
 const userVerification = UserVerificationModel;
 const user = UserModel;
+const userReport = UserReportModel;
+// ---------------------------------------------------------------------------
 
 // @desc Create new user
 // @route POST /user
@@ -53,7 +57,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // @desc get current user
-// @route GET /user/
+// @route GET /user
 // @access Private
 export const getCurrentUser = (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
@@ -68,15 +72,15 @@ export const getCurrentUser = (req: IRequestWithUser, res: Response, next: NextF
 };
 
 // @desc get user by id
-// @route GET /user/:id
+// @route GET /user/:userId
 // @access Public
 export const getUserById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const { userId } = req.params;
 
-    if (!id) return res.status(400).json(new HttpException(400, "Bad Request"));
+    if (!userId) return res.status(400).json(new HttpException(400, "Bad Request"));
 
-    const userFound: IUser = await user.findById(id).select("-password").lean().exec();
+    const userFound: IUser = await user.findById(userId).select("-password").lean().exec();
 
     if (userFound) {
       return res.status(200).json({ code: 200, message: "OK", data: userFound });
@@ -112,9 +116,9 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
     // address
     userFound.address.street = req.body.street || userFound.address.street;
 
-    const newCountry: ICountry = req.body.country || userFound.address.country;
-    const newState: IState = req.body.state || userFound.address.state;
-    const newCity: ICity = req.body.city || userFound.address.city;
+    const newCountry: ICountry = req.body.country;
+    const newState: IState = req.body.state;
+    const newCity: ICity = req.body.city;
 
     userFound.address.country = newCountry;
     userFound.address.state = newState;
@@ -140,11 +144,11 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
       userFound.experience = newExperience;
     }
 
-    if (req.body.password) {
-      // hash password
-      const hashedPassword = await bcrypt.hash(req.body.password, 10);
-      userFound.password = hashedPassword ? hashedPassword : userFound.password;
-    }
+    // if (req.body.password) {
+    //   // hash password
+    //   const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    //   userFound.password = hashedPassword ? hashedPassword : userFound.password;
+    // }
 
     if (req.body.email) {
       if (req.body.email === userFound.email) {
@@ -188,7 +192,6 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
       if (!userFound) return res.status(404).json(new HttpException(404, "User not found"));
 
       // check form data image
-
       if (!req.file) {
         return res.status(400).json(new HttpException(400, "Bad Request"));
       }
@@ -243,6 +246,9 @@ export const uploadImage = async (req: IRequestWithUser, res: Response, next: Ne
   }
 };
 
+// @desc upload file [ cv ]
+// @route POST /user/uploadfile/:id
+// @access Private
 export const uploadFile = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -284,6 +290,9 @@ export const uploadFile = async (req: IRequestWithUser, res: Response, next: Nex
   }
 };
 
+// @desc verify user
+// @route POST /user/verify/:id
+// @access Private
 export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -321,6 +330,9 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+// @desc send user verification link
+// @route POST /user/send-verify/:id
+// @access Private
 export const sendVerifyCode = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { _id } = req.user;
@@ -345,6 +357,33 @@ export const sendVerifyCode = async (req: IRequestWithUser, res: Response, next:
     }
 
     return await mailService.sendEmailVerification(userFound, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reportUser = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+  try {
+    const reportingUser: IUser = req.user;
+    const reportedUserId: string = req.params.userId as string;
+    const reportDescription: string = req.body.description as string;
+
+    if (reportedUserId === reportingUser._id.toString()) return res.status(409).json(new HttpException(409, "Cannot Report My Self"));
+
+    if (!reportDescription || reportDescription === "" || !reportedUserId || reportedUserId === "")
+      return res.status(400).json(new HttpException(400, "Bad Request"));
+
+    const newObjReport: INewReport_User = {
+      userReportedId: new Types.ObjectId(reportedUserId),
+      userReportById: reportingUser._id,
+      description: reportDescription,
+    };
+
+    const newReport = await userReport.create(newObjReport);
+
+    if (newReport) {
+      return res.status(200).json({ code: 200, status: "OK", message: "User Has Reported" });
+    }
   } catch (error) {
     next(error);
   }

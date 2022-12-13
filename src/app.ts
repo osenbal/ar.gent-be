@@ -1,16 +1,16 @@
 import path from "path";
 import express from "express";
+import cors from "cors";
+import { set } from "mongoose";
+import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
-import cors from "cors";
-import morgan from "morgan";
-import errorMiddleware from "@middlewares/error.middleware";
-import corsOptions from "@config/cors.config";
-import cookieParser from "cookie-parser";
-import bodyParser from "body-parser";
-import { connect, ConnectOptions, set } from "mongoose";
-import { Routes } from "@interfaces/routes.interface";
 import { Database } from "@/databases";
+import errorMiddleware from "@/middlewares/error.middleware";
+import { Routes } from "@interfaces/routes.interface";
+import corsOptions from "@config/cors.config";
 import { LOG_FORMAT } from "@config/config";
 import { stream, logger } from "@utils/logger";
 
@@ -24,7 +24,7 @@ class App {
     this.env = process.env.NODE_ENV || "development";
     this.port = process.env.APP_PORT || process.env.PORT;
 
-    // this.connectToDatabase();
+    this.app.enable("trust proxy");
     this.initialViewEngginge();
     this.initialMiddlewares();
     this.initializeRoutes(routes);

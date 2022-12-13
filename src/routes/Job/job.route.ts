@@ -1,8 +1,7 @@
 import { Router } from "express";
-import { Routes } from "@interfaces/routes.interface";
 import {
-  createJob,
-  getAllJob,
+  createNewJob,
+  getJobs,
   getJobByUserId,
   getJobById,
   updateJob,
@@ -15,8 +14,9 @@ import {
   getApplicationsUser,
   getNearlyJobs,
 } from "@controllers/job.controller";
-import { authPolicyMiddleware } from "@middlewares/authRole.middleware";
-import authMiddleware from "@middlewares/auth.middleware";
+import { authPolicyMiddleware } from "@/middlewares/User/authPolicy.middleware";
+import authMiddleware from "@/middlewares/User/auth.middleware";
+import { Routes } from "@interfaces/routes.interface";
 
 class JobRoute implements Routes {
   public path = "/job/";
@@ -27,9 +27,9 @@ class JobRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router.route(`${this.path}`).get(authMiddleware, getAllJob);
+    this.router.route(`${this.path}`).post(authMiddleware, createNewJob);
 
-    this.router.route(`${this.path}`).post(authMiddleware, createJob);
+    this.router.route(`${this.path}`).get(authMiddleware, getJobs);
 
     this.router.route(`${this.path}nearly`).get(authMiddleware, getNearlyJobs);
 

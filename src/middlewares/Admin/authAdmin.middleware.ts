@@ -1,10 +1,10 @@
-import { IRequestWithAdmin } from "@/interfaces/auth.interface";
+import { Response, NextFunction } from "express";
 import { verify } from "jsonwebtoken";
 import AdminModel from "@/models/Admin/Admin.model";
+import { IRequestWithAdmin } from "@/interfaces/auth.interface";
 import { IDataStoredInToken } from "@interfaces/auth.interface";
-import { Response, NextFunction } from "express";
-import { HttpException } from "@exceptions/HttpException";
 import { ACCESS_TOKEN_SECRET } from "@config/config";
+import { HttpException } from "@exceptions/HttpException";
 
 const authAdminMiddleware = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
   try {

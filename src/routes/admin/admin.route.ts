@@ -12,8 +12,6 @@ import {
   logoutAdmin,
   refreshTokenAdmin,
 } from "@controllers/admin.controller";
-import { Logform } from "winston";
-import authMiddleware from "@/middlewares/auth.middleware";
 import authAdminMiddleware from "@/middlewares/Admin/authAdmin.middleware";
 
 class AdminRoute implements Routes {

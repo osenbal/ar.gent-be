@@ -1,22 +1,33 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
+import { ICity, ICountry, IState } from "country-state-city";
+import { MailService } from "@/services/mail.service";
 import JobModel from "@models/Job.model";
 import UserModel from "@/models/User/User.model";
-import { MailService } from "@/services/mail.service";
 import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
-import { HttpException } from "@/exceptions/HttpException";
 import { IRequestWithUser } from "@/interfaces/auth.interface";
 import IUser from "@/interfaces/user.interface";
-import mongoose from "mongoose";
-import { City, ICity, ICountry, IState } from "country-state-city";
 import { EJobLevel, EJobType, EJobWorkPlace, IAddress, ICreateBody, INewJob } from "@/interfaces/job.interface";
+import { HttpException } from "@/exceptions/HttpException";
 
+// -----------------------------------------------------
+// Model
+// -----------------------------------------------------
 const job = JobModel;
 const user = UserModel;
 const applyJobUser = AppliedJobUserModel;
 
+// -----------------------------------------------------
+// Services
+// -----------------------------------------------------
 const mailService = new MailService();
 
-export const createJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+// -----------------------------------------------------
+
+// @desc Create new job
+// @route POST /job
+// @access Private
+export const createNewJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const { title, description, type, level, workPlace, city, country, state, salary }: ICreateBody = req.body;
 
@@ -37,7 +48,6 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
       state,
       city,
     };
-    console.log(location);
 
     const jobObject: INewJob = {
       userId,
@@ -62,14 +72,19 @@ export const createJob = async (req: IRequestWithUser, res: Response, next: Next
   }
 };
 
-export const getAllJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
+// @desc Get all jobs
+// @route GET /job
+// @access Public
+export const getJobs = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
-    const search: string = (req.query.search as string) || "";
-
     const optionTypes = Object.values(EJobType).map((value: string) => value);
     const optionLevels = Object.values(EJobLevel).map((value: string) => value);
     const optionWorkPlace = Object.values(EJobWorkPlace).map((value: string) => value);
 
+    // =====================================================
+    // Query string
+    // =====================================================
+    const search: string = (req.query.search as string) || "";
     let workplace: string = (req.query.workplace as string) || "";
     let type: string = (req.query.type as string) || "";
     let level: string = (req.query.level as string) || "";
@@ -83,6 +98,9 @@ export const getAllJob = async (req: IRequestWithUser, res: Response, next: Next
       level = "";
     }
 
+    // =====================================================
+    // Pagination
+    // =====================================================
     const page: number = parseInt(req.query.page as string) || 0;
     const limit: number = parseInt(req.query.limit as string) || 10;
     const offset: number = page * limit;
@@ -99,7 +117,6 @@ export const getAllJob = async (req: IRequestWithUser, res: Response, next: Next
       })
       .exec();
     const totalPage = Math.ceil(totalRows / limit);
-
     const result = await job
       .aggregate([
         {
@@ -150,9 +167,13 @@ export const getAllJob = async (req: IRequestWithUser, res: Response, next: Next
   }
 };
 
+// @desc Get job by user id
+// @route GET /job/user/:userId
+// @access Public
 export const getJobByUserId = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const userId = req.params.userId;
+
     const jobs = await job.aggregate([
       {
         $lookup: {
@@ -191,6 +212,9 @@ export const getJobByUserId = async (req: IRequestWithUser, res: Response, next:
   }
 };
 
+// @desc Get job id
+// @route GET /job/:jobId
+// @access Public
 export const getJobById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -263,9 +287,13 @@ export const getJobById = async (req: IRequestWithUser, res: Response, next: Nex
   }
 };
 
+// @desc Update job
+// @route PATCH /job/:jobId
+// @access Private
 export const updateJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
+
     const jobFound = await job.findOne({ _id: jobId }).exec();
 
     if (!jobFound) {
@@ -278,9 +306,13 @@ export const updateJob = async (req: IRequestWithUser, res: Response, next: Next
       return res.status(401).json(new HttpException(401, "Unauthorized"));
     }
 
-    const country: ICountry = req.body.country || jobFound.location.country;
-    const state: IState = req.body.state || jobFound.location.state;
-    const city: ICity = req.body.city || jobFound.location.city;
+    const country: ICountry = req.body.country;
+    const state: IState = req.body.state;
+    const city: ICity = req.body.city;
+
+    if (!country || !state || !city) {
+      return res.status(400).json(new HttpException(400, "Bad Request"));
+    }
 
     const type: EJobType = req.body.type || jobFound.type;
     const level: EJobLevel = req.body.level || jobFound.level;
@@ -296,7 +328,6 @@ export const updateJob = async (req: IRequestWithUser, res: Response, next: Next
       state,
       city,
     };
-
     jobFound.salary = req.body.salary || jobFound.salary;
     jobFound.updatedAt = new Date();
 
@@ -310,6 +341,9 @@ export const updateJob = async (req: IRequestWithUser, res: Response, next: Next
   }
 };
 
+// @desc Delete job
+// @route DELETE /job/:jobId
+// @access Private
 export const deleteJobById = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -337,6 +371,9 @@ export const deleteJobById = async (req: IRequestWithUser, res: Response, next: 
   }
 };
 
+// @desc apply for job
+// @route POST /job/apply/:jobId
+// @access Private
 export const handleApplyJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -401,6 +438,9 @@ export const handleApplyJob = async (req: IRequestWithUser, res: Response, next:
   }
 };
 
+// @desc check applied for job
+// @route GET /job/check-apply/:jobId
+// @access Private
 export const checkIsApplied = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -436,17 +476,22 @@ export const checkIsApplied = async (req: IRequestWithUser, res: Response, next:
   }
 };
 
+// @desc Get applications for job
+// @route GET /job/applications/:jobId
+// @access Private
 export const getAppliciants = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
-    let paneQuery = req.query.pane;
+    let paneQuery: string = req.query.pane as string;
+
+    const paneMenus = ["pending", "approved", "rejected"];
 
     if (paneQuery === "null" || paneQuery === "undefined") {
       paneQuery = "pending";
     }
 
-    if (paneQuery !== "pending" && paneQuery !== "approved" && paneQuery !== "rejected") {
-      return res.status(400).json(new HttpException(400, "Invalid pane query"));
+    if (!paneMenus.includes(paneQuery)) {
+      paneQuery = "pending";
     }
 
     const jobFound = await job.findOne({ _id: jobId }).lean();
@@ -511,6 +556,9 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
   }
 };
 
+// @desc approve appliciant for job
+// @route POST /job/approve/:id/:userId/:jobId
+// @access Private
 export const handleApproveJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -562,6 +610,9 @@ export const handleApproveJob = async (req: IRequestWithUser, res: Response, nex
   }
 };
 
+// @desc reject appliciant for job
+// @route POST /job/approve/:id/:userId/:jobId
+// @access Private
 export const handleRejectJob = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.jobId;
@@ -612,6 +663,9 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
   }
 };
 
+// @desc Get aplication users
+// @route POST /job/applications/:userId
+// @access Private
 export const getApplicationsUser = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const userId = req.params.userId;
@@ -662,15 +716,50 @@ export const getApplicationsUser = async (req: IRequestWithUser, res: Response, 
   }
 };
 
+// @desc Get nearly jobs
+// @route POST /job/nearly
+// @access Public
 export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
+    const optionTypes = Object.values(EJobType).map((value: string) => value);
+    const optionLevels = Object.values(EJobLevel).map((value: string) => value);
+    const optionWorkPlace = Object.values(EJobWorkPlace).map((value: string) => value);
+
     const user: IUser = req.user;
+
+    // =====================================================
+    // Query string
+    // =====================================================
+    const search: string = (req.query.search as string) || "";
+    let workplace: string = (req.query.workplace as string) || "";
+    let type: string = (req.query.type as string) || "";
+    let level: string = (req.query.level as string) || "";
+    if (workplace && !optionWorkPlace.includes(workplace)) {
+      workplace = "";
+    }
+    if (type && !optionTypes.includes(type)) {
+      type = "";
+    }
+    if (level && !optionLevels.includes(level)) {
+      level = "";
+    }
+
     const page: number = parseInt(req.query.page as string) || 0;
     const limit: number = parseInt(req.query.limit as string) || 10;
     const offset: number = page * limit;
     const totalRows = await job
       .countDocuments({
-        $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+        $and: [
+          {
+            $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+          },
+          { title: { $regex: search, $options: "i" } },
+          {
+            workPlace: { $regex: workplace, $options: "i" },
+            type: { $regex: type, $options: "i" },
+            level: { $regex: level, $options: "i" },
+          },
+        ],
       })
       .exec();
     const totalPage = Math.ceil(totalRows / limit);
@@ -690,7 +779,17 @@ export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: 
         },
         {
           $match: {
-            $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+            $and: [
+              {
+                $or: [{ "location.city.name": user.address?.city?.name }, { "location.state.isoCode": user.address?.state?.isoCode }],
+              },
+              { title: { $regex: search, $options: "i" } },
+              {
+                workPlace: { $regex: workplace, $options: "i" },
+                type: { $regex: type, $options: "i" },
+                level: { $regex: level, $options: "i" },
+              },
+            ],
           },
         },
         {
