@@ -128,6 +128,7 @@ export const getJobs = async (req: IRequestWithUser, res: Response, next: NextFu
       })
       .exec();
     const totalPage = Math.ceil(totalRows / limit);
+
     const result = await job
       .aggregate([
         {
@@ -742,6 +743,17 @@ export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: 
     // Query string
     // =====================================================
     const search: string = (req.query.search as string) || "";
+    let startIndex: number = parseInt(req.query.startIndex as string) || 0;
+    // multiple 10
+    let isTrueOffset = false;
+    if (startIndex % 10 === 0) {
+      isTrueOffset = true;
+    }
+
+    if (!isTrueOffset) {
+      startIndex = 0;
+    }
+
     let workplace: string = (req.query.workplace as string) || "";
     let type: string = (req.query.type as string) || "";
     let level: string = (req.query.level as string) || "";
@@ -757,7 +769,7 @@ export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: 
 
     const page: number = parseInt(req.query.page as string) || 0;
     const limit: number = parseInt(req.query.limit as string) || 10;
-    const offset: number = page * limit;
+    const offset: number = startIndex !== 0 ? startIndex : page * limit;
     const totalRows = await job
       .countDocuments({
         $and: [
@@ -821,6 +833,10 @@ export const getNearlyJobs = async (req: IRequestWithUser, res: Response, next: 
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit);
+
+    if (!result) {
+      return res.status(200).json({ code: 200, message: "OK", data: [], ofsset: offset, page, limit, totalRows, totalPage });
+    }
 
     return res.status(200).json({ code: 200, message: "OK", data: result, ofsset: offset, page, limit, totalRows, totalPage });
   } catch (error) {
