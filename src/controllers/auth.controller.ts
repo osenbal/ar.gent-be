@@ -73,7 +73,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     const refreshToken = cookies.refreshToken;
 
-    const { refreshTokenData, accessToken } = await authService.refresh(refreshToken);
+    const { accessToken } = await authService.refresh(refreshToken);
 
     res.cookie("Authorization", accessToken.token, {
       secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
@@ -82,17 +82,17 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       maxAge: accessToken.expiresIn,
     });
 
-    res.cookie("refreshToken", refreshTokenData.token, {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
-      httpOnly: true,
-      sameSite: "none",
-      maxAge: refreshTokenData.expiresIn,
-    });
+    // res.cookie("refreshToken", refreshTokenData.token, {
+    //   secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+    //   httpOnly: true,
+    //   sameSite: "none",
+    //   maxAge: refreshTokenData.expiresIn,
+    // });
 
     // get id from access token
     const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
-    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshTokenData, _id } });
+    res.status(200).json({ code: 200, message: "OK", data: { accessToken, _id } });
   } catch (error) {
     next(error);
   }

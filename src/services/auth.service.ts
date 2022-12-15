@@ -89,13 +89,13 @@ class AuthService {
     return { refreshTokenData, accessToken, userId: foundUser._id.toString() };
   }
 
-  public async refresh(refreshToken: string): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+  public async refresh(refreshToken: string): Promise<{ accessToken: ITokenData }> {
     if (!refreshToken) throw new HttpException(400, "Unauthorized");
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
     const { _id } = jwt.verify(refreshToken, secretKey) as IDataStoredInToken;
 
-    if (!_id) throw new HttpException(400, "Unauthorized");
+    if (!_id) throw new HttpException(401, "Unauthorized");
 
     const user = await this.user.findById(_id).exec();
     if (!user) throw new HttpException(409, "User not found");
@@ -103,9 +103,9 @@ class AuthService {
     if (!user.status) throw new HttpException(409, `Account has been banned`);
 
     const accessToken: ITokenData = this.createToken(user);
-    const refreshTokenData: ITokenData = this.createRefreshToken(user);
+    // const refreshTokenData: ITokenData = this.createRefreshToken(user);
 
-    return { refreshTokenData, accessToken };
+    return { accessToken };
   }
 
   public async logout(userData: IUser): Promise<IUser> {
