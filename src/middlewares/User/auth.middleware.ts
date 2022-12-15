@@ -37,13 +37,13 @@ const authMiddleware = async (req: IRequestWithUser, res: Response, next: NextFu
         req.user = findUser;
         next();
       } else {
-        next(new HttpException(401, "Unauthorized"));
+        next(new HttpException(404, "User not found"));
       }
     } else {
-      next(new HttpException(404, "Authentication token missing"));
+      next(new HttpException(401, "Unauthorized"));
     }
   } catch (error) {
-    next(new HttpException(401, "Wrong authentication token"));
+    next(new HttpException(401, "Unauthorized"));
   }
 };
 

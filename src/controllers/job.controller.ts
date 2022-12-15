@@ -465,7 +465,7 @@ export const checkIsApplied = async (req: IRequestWithUser, res: Response, next:
     const { userId } = jobFound;
 
     if (userId.toString() === req.user._id.toString()) {
-      return res.status(401).json(new HttpException(401, "Unauthorized"));
+      return res.status(200).json({ code: 200, message: "OK", data: true });
     }
 
     const applyJobs = await applyJobUser.findOne({ userId: req.user._id, jobId }).lean();
