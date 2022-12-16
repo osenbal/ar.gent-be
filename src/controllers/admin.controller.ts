@@ -121,13 +121,14 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
         return res.status(200).json({ code: 200, message: "OK", data: { _id } });
       }
     }
+
     if (!cookies?.adminRefreshToken) {
       return res.status(401).json({ code: 401, message: "Unauthorized" });
     }
 
     const adminRefreshToken = cookies.adminRefreshToken;
 
-    const { refreshTokenData, accessToken } = await authService.refreshAdmin(adminRefreshToken);
+    const { accessToken } = await authService.refreshAdmin(adminRefreshToken);
 
     res.cookie("adminAuth", accessToken.token, {
       secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
@@ -136,17 +137,11 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
       maxAge: accessToken.expiresIn,
     });
 
-    res.cookie("adminRefreshToken", refreshTokenData.token, {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
-      httpOnly: true,
-      sameSite: "none",
-      maxAge: refreshTokenData.expiresIn,
-    });
-
+    console.log("========================================== set new refresh admin");
     // get id from access token
     const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
-    res.status(200).json({ code: 200, message: "OK", data: { accessToken, refreshTokenData, _id } });
+    res.status(200).json({ code: 200, message: "OK", data: { accessToken, _id } });
   } catch (error) {
     next(error);
   }

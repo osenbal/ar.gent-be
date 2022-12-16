@@ -205,7 +205,7 @@ class AuthService {
     return { refreshTokenData, accessToken, adminId: foundAdmin._id.toString() };
   }
 
-  public async refreshAdmin(refreshToken: string): Promise<{ refreshTokenData: ITokenData; accessToken: ITokenData }> {
+  public async refreshAdmin(refreshToken: string): Promise<{ accessToken: ITokenData }> {
     if (!refreshToken) throw new HttpException(400, "Unauthorized");
 
     const secretKey: string = REFRESH_TOKEN_SECRET;
@@ -217,9 +217,8 @@ class AuthService {
     if (!admin) throw new HttpException(409, "User not found");
 
     const accessToken: ITokenData = this.createTokenAdmin(admin);
-    const refreshTokenData: ITokenData = this.createRefreshTokenAdmin(admin);
 
-    return { refreshTokenData, accessToken };
+    return { accessToken };
   }
 
   public verifyAccessTokenAdmin(token: string): IDataStoredInToken {

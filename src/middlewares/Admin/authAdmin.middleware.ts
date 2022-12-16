@@ -21,13 +21,13 @@ const authAdminMiddleware = async (req: IRequestWithAdmin, res: Response, next: 
         req.admin = findAdmin;
         next();
       } else {
-        next(new HttpException(401, "Unauthorized"));
+        next(new HttpException(404, "User not found"));
       }
     } else {
-      next(new HttpException(404, "Authentication token missing"));
+      next(new HttpException(401, "Unauthorized"));
     }
   } catch (error) {
-    next(new HttpException(401, "Wrong authentication token"));
+    next(new HttpException(401, "Unauthorized"));
   }
 };
 
