@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import AdminModel from "@/models/Admin/Admin.model";
 import AuthService from "@services/auth.service";
 import UserModel from "@/models/User/User.model";
@@ -8,6 +9,7 @@ import JobModel from "@/models/Job.model";
 import AppliedJobUserModel from "@/models/AppliedJobUser/AppliedJobUser";
 import UserResetPasswordModel from "@/models/User/UserResetPassword.model";
 import UserVerificationModel from "@/models/User/UserVerification.model";
+import UserReportModel from "@/models/User/UserReport.model";
 import { IDataStoredInToken, IRequestWithAdmin } from "@/interfaces/auth.interface";
 import { HttpException } from "@exceptions/HttpException";
 import IAdmin from "@/interfaces/admin.interface";
@@ -19,6 +21,7 @@ const user = UserModel;
 const userResetPassword = UserResetPasswordModel;
 const userVerification = UserVerificationModel;
 const applyJobUser = AppliedJobUserModel;
+const reportUser = UserReportModel;
 
 // --------------------------------------------------------------------------------------------
 
@@ -137,7 +140,6 @@ export const refreshTokenAdmin = async (req: Request, res: Response, next: NextF
       maxAge: accessToken.expiresIn,
     });
 
-    console.log("========================================== set new refresh admin");
     // get id from access token
     const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
@@ -246,7 +248,9 @@ export const bannedUser = async (req: IRequestWithAdmin, res: Response, next: Ne
 
     const bannedUser = await user.findById(userId).updateOne({ status: !userFound.status });
 
-    if (bannedUser) {
+    const closeJobs = await JobModel.updateMany({ userId }, { isClosed: userFound.status });
+
+    if (bannedUser && closeJobs) {
       const bannedUser = await user.findById(userId).lean();
 
       return res.status(200).json({ code: 200, message: "OK", data: bannedUser });
@@ -266,9 +270,10 @@ export const deleteUsers = async (req: IRequestWithAdmin, res: Response, next: N
       const deleteApplyJobUsers = await applyJobUser.deleteMany({ userId: { $in: usersId } });
       const deleteUserResetPasswords = await userResetPassword.deleteMany({ userId: { $in: usersId } });
       const deleteUserVerifications = await userVerification.deleteMany({ userId: { $in: usersId } });
+      const deleteUserReport = await reportUser.deleteMany({ userReportedById: { $in: usersId } } || { userReportedId: { $in: usersId } });
       const deletedUsers = await user.deleteMany({ _id: { $in: usersId } });
 
-      if (deletedUsers && deleteJobs && deleteApplyJobUsers && deleteUserResetPasswords && deleteUserVerifications) {
+      if (deletedUsers && deleteJobs && deleteApplyJobUsers && deleteUserResetPasswords && deleteUserVerifications && deleteUserReport) {
         return res.status(200).json({ code: 200, message: "OK", data: deletedUsers });
       } else {
         return res.status(500).json(new HttpException(500, "Server error"));
@@ -285,13 +290,22 @@ export const deleteUserById = async (req: IRequestWithAdmin, res: Response, next
   try {
     const { userId } = req.params;
     if (!userId) return res.status(400).json(new HttpException(400, "Bad request"));
-
     const userFound = await user.findById(userId).lean();
     if (userFound) {
+      const jobsFounds = await JobModel.find({ userId }).lean();
+
+      if (jobsFounds) {
+        const userAppliciants = await applyJobUser.deleteMany({ jobId: { $in: jobsFounds.map((job) => job._id) } });
+      }
+
+      const deleteJobs = await JobModel.deleteMany({ userId });
+      const deleteApplyJobUsers = await applyJobUser.deleteMany({ userId });
+      const deleteUserResetPasswords = await userResetPassword.deleteMany({ userId });
+      const deleteUserVerifications = await userVerification.deleteMany({ userId });
+      const deleteUserReport = await reportUser.deleteMany({ userReportedById: { $in: userId } } || { userReportedId: { $in: userId } });
       const deletedUser = await user.findOneAndDelete({ _id: userId });
-      if (deletedUser) {
-        const users = await user.find().lean();
-        return res.status(200).json({ code: 200, message: "OK", data: users });
+      if (deletedUser && deleteJobs && deleteApplyJobUsers && deleteUserResetPasswords && deleteUserVerifications && deleteUserReport) {
+        return res.status(200).json({ code: 200, message: "OK" });
       } else {
         return res.status(500).json(new HttpException(500, "Server error"));
       }
@@ -307,6 +321,232 @@ export const getTotalUser = async (req: IRequestWithAdmin, res: Response, next: 
   try {
     const total = await user.countDocuments();
     return res.status(200).json({ code: 200, message: "OK", data: total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReportsUser = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const page: number = parseInt(req.query.page as string) || 0;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search || "";
+    const offset: number = page * limit;
+
+    const resultData = await reportUser.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userReportedId",
+          foreignField: "_id",
+          as: "userReported",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userReportById",
+          foreignField: "_id",
+          as: "userReport",
+        },
+      },
+      {
+        $unwind: "$userReported",
+      },
+      {
+        $unwind: "$userReport",
+      },
+      {
+        $match: {
+          $or: [{ "userReported.email": { $regex: search, $options: "i" } }],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          description: 1,
+          userReportedId: 1,
+          userReportId: 1,
+          createdAt: 1,
+          userReported: {
+            _id: 1,
+            email: 1,
+            username: 1,
+            fullName: 1,
+            avatar: 1,
+            phoneNumber: 1,
+            address: 1,
+            status: 1,
+            verified: 1,
+            createdAt: 1,
+          },
+          userReport: {
+            _id: 1,
+            email: 1,
+            username: 1,
+            fullName: 1,
+            avatar: 1,
+            phoneNumber: 1,
+            address: 1,
+            status: 1,
+            verified: 1,
+            createdAt: 1,
+          },
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: offset,
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    const totalRows = resultData.length;
+    const totalPage = Math.ceil(totalRows / limit);
+
+    if (resultData) {
+      const total = await reportUser.countDocuments();
+      return res
+        .status(200)
+        .json({ code: 200, message: "OK", data: resultData, ofsset: offset, page, limit, totalRows, totalPage, totalReports: total });
+    }
+
+    return res.status(404).json(new HttpException(404, "Reports not found"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReportsUser = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    if (req.body) {
+      const { reportsId } = req.body;
+      const deletedReports = await reportUser.deleteMany({ _id: { $in: reportsId } });
+
+      if (deletedReports) {
+        return res.status(200).json({ code: 200, message: "OK", data: deletedReports });
+      } else {
+        return res.status(500).json(new HttpException(500, "Server error"));
+      }
+    } else {
+      return res.status(400).json(new HttpException(400, "Bad request"));
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReportUserById = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+    if (!reportId) return res.status(400).json(new HttpException(400, "Bad request"));
+
+    const reportFound = await reportUser.findById(reportId).lean();
+    if (reportFound) {
+      const deletedReport = await reportUser.findOneAndDelete({ _id: reportId });
+
+      if (deletedReport) {
+        const reports = await reportUser.find().lean();
+        return res.status(200).json({ code: 200, message: "OK", data: reports });
+      }
+
+      return res.status(500).json(new HttpException(500, "Server error"));
+    }
+
+    return res.status(404).json(new HttpException(404, "Report not found"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTotalReportUser = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const total = await reportUser.countDocuments();
+    return res.status(200).json({ code: 200, message: "OK", data: total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReportUserDetail = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+    if (!reportId) return res.status(400).json(new HttpException(400, "Bad request"));
+
+    const reportFound = await reportUser.findById(reportId).lean();
+
+    if (reportFound) {
+      const report = await reportUser.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userReportedId",
+            foreignField: "_id",
+            as: "userReported",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userReportById",
+            foreignField: "_id",
+            as: "userReport",
+          },
+        },
+        {
+          $unwind: "$userReported",
+        },
+        {
+          $unwind: "$userReport",
+        },
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(reportId),
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            description: 1,
+            userReportedId: 1,
+            userReportId: 1,
+            createdAt: 1,
+            userReported: {
+              _id: 1,
+              email: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              phoneNumber: 1,
+              address: 1,
+              status: 1,
+              verified: 1,
+              createdAt: 1,
+            },
+            userReport: {
+              _id: 1,
+              email: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              phoneNumber: 1,
+              address: 1,
+              status: 1,
+              verified: 1,
+              createdAt: 1,
+            },
+          },
+        },
+      ]);
+
+      return res.status(200).json({ code: 200, message: "OK", data: report[0] });
+    }
+
+    return res.status(404).json(new HttpException(404, "Report not found"));
   } catch (error) {
     next(error);
   }

@@ -375,7 +375,7 @@ export const deleteJobById = async (req: IRequestWithUser, res: Response, next: 
 
     const deletedJob = await job.findOne({ _id: jobId }).deleteOne();
 
-    if (deletedJob) {
+    if (deletedJob && deleteUserAppliciant) {
       return res.status(200).json({ code: 200, message: "OK", data: "success delete" });
     }
   } catch (error) {
@@ -399,6 +399,10 @@ export const handleApplyJob = async (req: IRequestWithUser, res: Response, next:
 
     if (userId.toString() === req.user._id.toString()) {
       return res.status(401).json(new HttpException(401, "Unauthorized"));
+    }
+
+    if (jobFound.isClosed) {
+      return res.status(400).json(new HttpException(400, "This job is closed"));
     }
 
     const userData = await user.findOne({ _id: req.user._id }).lean();
