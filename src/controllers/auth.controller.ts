@@ -5,7 +5,6 @@ import AuthService from "@services/auth.service";
 import { MailService } from "@services/mail.service";
 import UserResetPasswordModel from "@models/User/UserResetPassword.model";
 import UserModel from "@/models/User/User.model";
-import { CURRENT_URL } from "@/config/config";
 import { IDataStoredInToken, IRequestWithUser } from "@interfaces/auth.interface";
 import { HttpException } from "@exceptions/HttpException";
 
@@ -82,14 +81,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       maxAge: accessToken.expiresIn,
     });
 
-    // res.cookie("refreshToken", refreshTokenData.token, {
-    //   secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
-    //   httpOnly: true,
-    //   sameSite: "none",
-    //   maxAge: refreshTokenData.expiresIn,
-    // });
-
-    // get id from access token
     const { _id } = jwt.decode(accessToken.token) as IDataStoredInToken;
 
     res.status(200).json({ code: 200, message: "OK", data: { accessToken, _id } });

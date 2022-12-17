@@ -12,7 +12,6 @@ import UserVerificationModel from "@/models/User/UserVerification.model";
 import UserReportModel from "@/models/User/UserReport.model";
 import { IDataStoredInToken, IRequestWithAdmin } from "@/interfaces/auth.interface";
 import { HttpException } from "@exceptions/HttpException";
-import IAdmin from "@/interfaces/admin.interface";
 
 // --------------------------------------------------------------------------------------------
 

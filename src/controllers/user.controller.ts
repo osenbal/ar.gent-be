@@ -1,20 +1,18 @@
 import { NextFunction, Request, Response } from "express";
 import { Types } from "mongoose";
+import { ICountry, IState, ICity } from "country-state-city";
 import UserModel from "@models/User/User.model";
 import UserVerificationModel from "@models/User/UserVerification.model";
-import UserResetPasswordModel from "@models/User/UserResetPassword.model";
 import UserReportModel from "@/models/User/UserReport.model";
 import AuthService from "@services/auth.service";
-import { HttpException } from "@exceptions/HttpException";
 import { MailService } from "@services/mail.service";
+import { HttpException } from "@exceptions/HttpException";
 import { IRequestWithUser } from "@interfaces/auth.interface";
 import IUser, { IEducation_User, IExperience_User, INewReport_User } from "@interfaces/user.interface";
-import { ICountry, IState, ICity } from "country-state-city";
 
 // ---------------------------------------------------------------------------
 const authService = new AuthService();
 const mailService = new MailService();
-const userResetPassword = UserResetPasswordModel;
 const userVerification = UserVerificationModel;
 const user = UserModel;
 const userReport = UserReportModel;
@@ -143,12 +141,6 @@ export const userEdit = async (req: IRequestWithUser, res: Response, next: NextF
       const newExperience: IExperience_User[] = req.body.experience;
       userFound.experience = newExperience;
     }
-
-    // if (req.body.password) {
-    //   // hash password
-    //   const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    //   userFound.password = hashedPassword ? hashedPassword : userFound.password;
-    // }
 
     if (req.body.email) {
       if (req.body.email === userFound.email) {
@@ -362,6 +354,9 @@ export const sendVerifyCode = async (req: IRequestWithUser, res: Response, next:
   }
 };
 
+// @desc send user verification link
+// @route POST /user/report/:userId
+// @access Private
 export const reportUser = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     const reportingUser: IUser = req.user;
