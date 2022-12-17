@@ -129,6 +129,7 @@ export const requestResetPassword = async (req: Request, res: Response, next: Ne
       return res.status(404).json(new HttpException(404, "Email not found"));
     }
 
+    console.log("================", userFound);
     const findUserResetPassword = await userResetPassword
       .findOne({
         userId: userFound._id,

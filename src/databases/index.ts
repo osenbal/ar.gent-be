@@ -22,7 +22,9 @@ export class Database {
     if (dbUrl) {
       mongoose
         .connect(dbUrl, DbConfig.options as ConnectOptions)
-        .then(() => console.log("Connected with database"))
+        .then(() => {
+          console.log("Connected with database");
+        })
         .catch(() => console.log("Not connected with database"));
     }
   }

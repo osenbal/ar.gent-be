@@ -17,9 +17,9 @@ describe("Test request with mongoose", () => {
     await connect();
   });
 
-  // afterEach(async () => {
-  //   await clear();
-  // });
+  afterEach(async () => {
+    await clear();
+  });
 
   afterAll(async () => {
     await disconnect();
@@ -43,19 +43,30 @@ describe("Test request with mongoose", () => {
   test("should return success status when created", async () => {
     const filePath = `${__dirname}/../testFiles/default_avatar.jpg`;
     if (fs.existsSync(filePath)) {
-      for (let i = 84; i < 10000; i++) {
-        const res = await request
-          .post("/user")
-          .field("username", `${newUser.username}${i}`)
-          .field("fullName", `${newUser.fullName}${i}`)
-          .field("email", `${newUser.email}-${i}@gmail.com`)
-          .field("password", newUser.password)
-          .field("phoneNumber", newUser.phoneNumber)
-          .field("birthday", newUser.birthday)
-          .field("gender", newUser.gender)
-          .attach("avatar", filePath);
-        expect(res.statusCode).toBe(201);
-      }
+      const res = await request
+        .post("/user")
+        .field("username", `${newUser.username}`)
+        .field("fullName", `${newUser.fullName}`)
+        .field("email", `${newUser.email}@gmail.com`)
+        .field("password", newUser.password)
+        .field("phoneNumber", newUser.phoneNumber)
+        .field("birthday", newUser.birthday)
+        .field("gender", newUser.gender)
+        .attach("avatar", filePath);
+      expect(res.statusCode).toBe(201);
+      // for (let i = 84; i < 10000; i++) {
+      //   const res = await request
+      //     .post("/user")
+      //     .field("username", `${newUser.username}${i}`)
+      //     .field("fullName", `${newUser.fullName}${i}`)
+      //     .field("email", `${newUser.email}-${i}@gmail.com`)
+      //     .field("password", newUser.password)
+      //     .field("phoneNumber", newUser.phoneNumber)
+      //     .field("birthday", newUser.birthday)
+      //     .field("gender", newUser.gender)
+      //     .attach("avatar", filePath);
+      //   expect(res.statusCode).toBe(201);
+      // }
     }
   });
 
