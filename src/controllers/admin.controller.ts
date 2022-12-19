@@ -239,17 +239,26 @@ export const bannedUser = async (req: IRequestWithAdmin, res: Response, next: Ne
   try {
     const { _id } = req.admin;
     const { userId } = req.params;
-    const userFound = await user.findById(userId).lean();
+    const userFound = await user.findById(userId).exec();
 
     if (!userFound) {
       return res.status(404).json(new HttpException(404, "User not found"));
     }
 
-    const bannedUser = await user.findById(userId).updateOne({ status: !userFound.status });
+    const bannedUser = await userFound.updateOne({ status: !userFound.status }).exec();
 
-    const closeJobs = await JobModel.updateMany({ userId }, { isClosed: userFound.status });
+    if (userFound.status === true) {
+      const closeJobs = await JobModel.find({ userId }).exec();
+      const closeAllJobs = await JobModel.updateMany({ userId }, { isClosed: true }).exec();
+      const jobsIdUserBanned = closeJobs.map((job) => job._id);
+      const deleteAppliciants = await applyJobUser.deleteMany({ jobId: { $in: jobsIdUserBanned } });
+    } else {
+      const closeJobs = await JobModel.updateMany({ userId }, { isClosed: false }).exec();
+    }
 
-    if (bannedUser && closeJobs) {
+    // const deleteAppliciants = await applyJobUser.deleteMany({ closeJobs. });
+
+    if (bannedUser) {
       const bannedUser = await user.findById(userId).lean();
 
       return res.status(200).json({ code: 200, message: "OK", data: bannedUser });

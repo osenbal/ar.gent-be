@@ -57,7 +57,6 @@ const UserSchema = new Schema<IUser>({
     enum: Object.values(EGender),
     required: true,
   },
-
   cv: {
     type: String,
     default: "",
@@ -74,7 +73,6 @@ const UserSchema = new Schema<IUser>({
     type: [Object as () => IExperience_User],
     default: [],
   },
-
   portfolioUrl: {
     type: [String],
     default: [],

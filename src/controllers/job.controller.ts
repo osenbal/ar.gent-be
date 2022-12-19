@@ -118,6 +118,7 @@ export const getJobs = async (req: IRequestWithUser, res: Response, next: NextFu
     const totalRows = await job
       .countDocuments({
         $and: [
+          { isClosed: false },
           { title: { $regex: search, $options: "i" } },
           {
             workPlace: { $regex: workplace, $options: "i" },
@@ -145,6 +146,7 @@ export const getJobs = async (req: IRequestWithUser, res: Response, next: NextFu
         {
           $match: {
             $and: [
+              { isClosed: false },
               { title: { $regex: search, $options: "i" } },
               { workPlace: { $regex: workplace, $options: "i" }, type: { $regex: type, $options: "i" }, level: { $regex: level, $options: "i" } },
             ],
@@ -288,6 +290,10 @@ export const getJobById = async (req: IRequestWithUser, res: Response, next: Nex
         },
       },
     ]);
+
+    if (jobFound[0].isClosed) {
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
 
     if (!jobFound || jobFound.length === 0) {
       return res.status(404).json(new HttpException(404, "Job not found"));
@@ -512,6 +518,10 @@ export const getAppliciants = async (req: IRequestWithUser, res: Response, next:
 
     const jobFound = await job.findOne({ _id: jobId }).lean();
 
+    if (jobFound.isClosed) {
+      return res.status(400).json(new HttpException(400, "This job is closed"));
+    }
+
     if (!jobFound) {
       return res.status(404).json(new HttpException(404, "Job not found"));
     }
@@ -591,8 +601,16 @@ export const handleApproveJob = async (req: IRequestWithUser, res: Response, nex
 
     const jobFound = await job.findOne({ _id: jobId }).lean();
 
+    if (jobFound.isClosed) {
+      return res.status(400).json(new HttpException(400, "This job is closed"));
+    }
+
     if (!jobFound) {
       return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    if (jobFound.isClosed) {
+      return res.status(400).json(new HttpException(400, "Job is closed"));
     }
 
     const userCreatedJob = await user.findOne({ _id: jobFound.userId }).lean();
@@ -644,6 +662,10 @@ export const handleRejectJob = async (req: IRequestWithUser, res: Response, next
     }
 
     const jobFound = await job.findOne({ _id: jobId }).lean();
+
+    if (jobFound.isClosed) {
+      return res.status(400).json(new HttpException(400, "This job is closed"));
+    }
 
     if (!jobFound) {
       return res.status(404).json(new HttpException(404, "Job not found"));
