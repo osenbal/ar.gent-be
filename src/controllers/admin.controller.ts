@@ -559,3 +559,145 @@ export const getReportUserDetail = async (req: IRequestWithAdmin, res: Response,
     next(error);
   }
 };
+
+export const getJobs = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    if (req.query.page && req.query.limit) {
+      const page: number = parseInt(req.query.page as string) || 0;
+      const limit: number = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search || "";
+      const offset: number = page * limit;
+      const totalRows = await JobModel.countDocuments({
+        $or: [{ title: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }],
+      }).exec();
+      const totalPage = Math.ceil(totalRows / limit);
+      const resultData = await JobModel.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $unwind: "$user",
+        },
+        {
+          $match: {
+            $or: [{ title: { $regex: search, $options: "i" } }, { "user.email": { $regex: search, $options: "i" } }],
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            salary: 1,
+            isClosed: 1,
+            description: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            user: {
+              _id: 1,
+              email: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              phoneNumber: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+        {
+          $skip: offset,
+        },
+        {
+          $limit: limit,
+        },
+      ]);
+
+      if (resultData) {
+        const total = await JobModel.countDocuments();
+        return res
+          .status(200)
+          .json({ code: 200, message: "OK", data: resultData, ofsset: offset, page, limit, totalRows, totalPage, totalJob: total });
+      } else {
+        return res.status(404).json(new HttpException(404, "Job not found"));
+      }
+    } else {
+      const jobs = await JobModel.find().lean();
+      if (jobs) {
+        return res.status(200).json({ code: 200, message: "OK", data: jobs });
+      } else {
+        return res.status(404).json(new HttpException(404, "Job not found"));
+      }
+    }
+  } catch (error) {}
+};
+
+export const closeJob = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { jobId } = req.params;
+    if (!jobId) return res.status(400).json(new HttpException(400, "Bad request"));
+
+    const jobFound = await JobModel.findById(jobId).lean();
+
+    if (jobFound) {
+      const job = await JobModel.findByIdAndUpdate(jobId, { isClosed: !jobFound.isClosed }, { new: true }).lean();
+
+      const deleteAppliciants = await applyJobUser.deleteMany({ jobId }).lean();
+
+      const jobUser = await JobModel.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $unwind: "$user",
+        },
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(jobId),
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            salary: 1,
+            isClosed: 1,
+            description: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            user: {
+              _id: 1,
+              email: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              phoneNumber: 1,
+            },
+          },
+        },
+      ]);
+
+      if (job && jobUser) {
+        return res.status(200).json({ code: 200, message: "OK", data: jobUser });
+      }
+
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    return res.status(404).json(new HttpException(404, "Job not found"));
+  } catch (error) {
+    next(error);
+  }
+};

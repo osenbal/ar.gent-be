@@ -16,6 +16,8 @@ import {
   getTotalReportUser,
   deleteReportUserById,
   getReportUserDetail,
+  getJobs,
+  closeJob,
 } from "@controllers/admin.controller";
 import authAdminMiddleware from "@/middlewares/Admin/authAdmin.middleware";
 
@@ -36,9 +38,12 @@ class AdminRoute implements Routes {
 
     // user
     this.router.route(`${this.path}user`).get(authAdminMiddleware, getAllUser);
+    this.router.route(`${this.path}job`).get(authAdminMiddleware, getJobs);
+
     this.router.route(`${this.path}user/total`).get(authAdminMiddleware, getTotalUser);
     this.router.route(`${this.path}user/delete`).delete(authAdminMiddleware, deleteUsers);
     this.router.route(`${this.path}user/banned/:userId`).patch(authAdminMiddleware, bannedUser);
+    this.router.route(`${this.path}job/close/:jobId`).patch(authAdminMiddleware, closeJob);
 
     this.router.route(`${this.path}user/report`).get(authAdminMiddleware, getReportsUser);
     this.router.route(`${this.path}user/report/total`).get(authAdminMiddleware, getTotalReportUser);
