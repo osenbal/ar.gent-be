@@ -13,6 +13,16 @@ const routes = [new IndexRoute(), new UserRoute(), new AuthRoute(), new JobRoute
 const app = new App(routes).app;
 const request = supertest(app);
 
+const newUser = {
+  username: "testuingbrec",
+  password: "secret123",
+  email: "testuing@gmail.com",
+  fullName: "unit test",
+  phoneNumber: "0832132134354",
+  birthday: "12/11/1981",
+  gender: "female",
+};
+
 // test database and root route
 describe("Test request with mongoose", () => {
   beforeAll(async () => {
@@ -26,78 +36,6 @@ describe("Test request with mongoose", () => {
   afterAll(async () => {
     await disconnect();
   });
-
-  const newUser = {
-    username: "testuingbrec",
-    password: "secret123",
-    email: "testuing@gmail.com",
-    fullName: "unit test",
-    phoneNumber: "0832132134354",
-    birthday: "12/11/1981",
-    gender: "female",
-  };
-
-  const newPost: ICreateBody = {
-    title: "test post",
-    description: "test post",
-    type: EJobType.FULL_TIME,
-    level: EJobLevel.JUNIOR,
-    workPlace: EJobWorkPlace.REMOTE,
-    country: {
-      name: "Indonesia",
-      isoCode: "ID",
-      flag: "🇮🇩",
-      phonecode: "62",
-      currency: "IDR",
-      latitude: "-5.00000000",
-      longitude: "120.00000000",
-      timezones: [
-        {
-          zoneName: "Asia/Jakarta",
-          gmtOffset: 25200,
-          gmtOffsetName: "UTC+07:00",
-          abbreviation: "WIB",
-          tzName: "Western Indonesian Time",
-        },
-        {
-          zoneName: "Asia/Jayapura",
-          gmtOffset: 32400,
-          gmtOffsetName: "UTC+09:00",
-          abbreviation: "WIT",
-          tzName: "Eastern Indonesian Time",
-        },
-        {
-          zoneName: "Asia/Makassar",
-          gmtOffset: 28800,
-          gmtOffsetName: "UTC+08:00",
-          abbreviation: "WITA",
-          tzName: "Central Indonesia Time",
-        },
-        {
-          zoneName: "Asia/Pontianak",
-          gmtOffset: 25200,
-          gmtOffsetName: "UTC+07:00",
-          abbreviation: "WIB",
-          tzName: "Western Indonesian Time",
-        },
-      ],
-    },
-    state: {
-      name: "DKI Jakarta",
-      isoCode: "JK",
-      countryCode: "ID",
-      latitude: "-6.20876340",
-      longitude: "106.84559900",
-    },
-    city: {
-      name: "Curup",
-      countryCode: "ID",
-      stateCode: "BE",
-      latitude: "-3.47030000",
-      longitude: "102.52070000",
-    },
-    salary: 1000,
-  };
 
   test("GET - /", async () => {
     const res = await request.get("/");
@@ -175,6 +113,4 @@ describe("Test request with mongoose", () => {
     });
     expect(res.statusCode).toBe(409);
   });
-
-  // ============= create post =============
 });
