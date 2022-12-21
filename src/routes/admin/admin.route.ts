@@ -18,6 +18,10 @@ import {
   getReportUserDetail,
   getJobs,
   closeJob,
+  deleteJobs,
+  deleteJobById,
+  getJobById,
+  getTotalJobs,
 } from "@controllers/admin.controller";
 import authAdminMiddleware from "@/middlewares/Admin/authAdmin.middleware";
 
@@ -41,17 +45,26 @@ class AdminRoute implements Routes {
     this.router.route(`${this.path}job`).get(authAdminMiddleware, getJobs);
 
     this.router.route(`${this.path}user/total`).get(authAdminMiddleware, getTotalUser);
+    this.router.route(`${this.path}job/total`).get(authAdminMiddleware, getTotalJobs);
+
     this.router.route(`${this.path}user/delete`).delete(authAdminMiddleware, deleteUsers);
+    this.router.route(`${this.path}job/delete`).delete(authAdminMiddleware, deleteJobs);
+
     this.router.route(`${this.path}user/banned/:userId`).patch(authAdminMiddleware, bannedUser);
     this.router.route(`${this.path}job/close/:jobId`).patch(authAdminMiddleware, closeJob);
 
     this.router.route(`${this.path}user/report`).get(authAdminMiddleware, getReportsUser);
+
     this.router.route(`${this.path}user/report/total`).get(authAdminMiddleware, getTotalReportUser);
     this.router.route(`${this.path}user/report/delete`).delete(authAdminMiddleware, deleteReportsUser);
+
     this.router.route(`${this.path}user/report/:reportId`).get(authAdminMiddleware, getReportUserDetail);
     this.router.route(`${this.path}user/report/:reportId`).delete(authAdminMiddleware, deleteReportUserById);
 
     this.router.route(`${this.path}user/:userId`).delete(authAdminMiddleware, deleteUserById);
+
+    this.router.route(`${this.path}job/:jobId`).get(authAdminMiddleware, getJobById);
+    this.router.route(`${this.path}job/:jobId`).delete(authAdminMiddleware, deleteJobById);
 
     this.router.route(`${this.path}:adminId`).get(authAdminMiddleware, getCurrentAdmin);
 

@@ -701,3 +701,129 @@ export const closeJob = async (req: IRequestWithAdmin, res: Response, next: Next
     next(error);
   }
 };
+
+export const deleteJobById = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { jobId } = req.params;
+    if (!jobId) return res.status(400).json(new HttpException(400, "Bad request"));
+
+    const jobFound = await JobModel.findById(jobId).lean();
+
+    if (jobFound) {
+      const deleteJob = await JobModel.findByIdAndDelete(jobId).lean();
+
+      const deleteAppliciants = await applyJobUser.find({ jobId }).lean();
+
+      if (deleteJob && deleteAppliciants) {
+        return res.status(200).json({ code: 200, message: "OK", data: deleteJob });
+      }
+
+      return res.status(404).json(new HttpException(404, "Job not found"));
+    }
+
+    return res.status(404).json(new HttpException(404, "Job not found"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteJobs = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { jobIds } = req.body;
+    if (jobIds?.length === 0) return res.status(400).json(new HttpException(400, "Bad request"));
+    if (!jobIds) return res.status(400).json(new HttpException(400, "Bad request"));
+
+    const deleteJobs = await JobModel.deleteMany({ _id: { $in: jobIds } }).lean();
+
+    const deleteAppliciants = await applyJobUser.deleteMany({ jobId: { $in: jobIds } }).lean();
+
+    if (deleteJobs && deleteAppliciants) {
+      return res.status(200).json({ code: 200, message: "OK", data: deleteJobs });
+    }
+
+    return res.status(404).json(new HttpException(404, "Job not found"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getJobById = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const { jobId } = req.params;
+    if (!jobId) return res.status(400).json(new HttpException(400, "Bad Request"));
+
+    const jobFound = await JobModel.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $lookup: {
+          from: "appliedjobusers",
+          localField: "_id",
+          foreignField: "jobId",
+          as: "applied",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(jobId),
+        },
+      },
+      {
+        $limit: 1,
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          title: 1,
+          description: 1,
+          type: 1,
+          level: 1,
+          location: 1,
+          workPlace: 1,
+          salary: 1,
+          isClosed: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          deletedAt: 1,
+          totalAppliciants: { $size: "$applied" },
+          user: {
+            _id: 1,
+            username: 1,
+            fullName: 1,
+            avatar: 1,
+          },
+        },
+      },
+    ]);
+
+    if (!jobFound || jobFound?.length === 0) return res.status(404).json(new HttpException(404, "Not Found"));
+
+    return res.status(200).json({ code: 200, status: "OK", data: jobFound[0] });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTotalJobs = async (req: IRequestWithAdmin, res: Response, next: NextFunction) => {
+  try {
+    const totalJobs = await JobModel.countDocuments({}).lean();
+
+    if (totalJobs) {
+      return res.status(200).json({ code: 200, message: "OK", data: totalJobs });
+    }
+
+    return res.status(404).json(new HttpException(404, "Not Found"));
+  } catch (error) {
+    next(error);
+  }
+};

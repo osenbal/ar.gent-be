@@ -37,6 +37,13 @@ export const createNewJob = async (req: IRequestWithUser, res: Response, next: N
       return res.status(400).json(new HttpException(400, "Bad Request"));
     }
 
+    console.log("============ type: ", type);
+    console.log("============ level: ", level);
+    console.log("============ workPlace: ", workPlace);
+    console.log("============ city: ", city);
+    console.log("============ country: ", country);
+    console.log("============ state: ", state);
+
     const userFound = await user.findById(userId).lean();
 
     if (!userFound) {
