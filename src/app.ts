@@ -50,7 +50,6 @@ class App {
    *
    **/
   private initialMiddlewares() {
-    this.app.use("etag");
     this.app.use(morgan(LOG_FORMAT, { stream }));
     this.app.use(cookieParser());
     this.app.use(bodyParser.urlencoded({ extended: true }));
