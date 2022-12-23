@@ -25,14 +25,14 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
     const { refreshTokenData, accessToken, userId } = await authService.login(userData);
 
     res.cookie("Authorization", accessToken.token, {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+      // secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
       maxAge: accessToken.expiresIn,
     });
 
     res.cookie("refreshToken", refreshTokenData.token, {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+      // secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
       maxAge: refreshTokenData.expiresIn,
@@ -75,7 +75,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     const { accessToken } = await authService.refresh(refreshToken);
 
     res.cookie("Authorization", accessToken.token, {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+      // secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
       maxAge: accessToken.expiresIn,
@@ -95,14 +95,14 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 export const logout = async (req: IRequestWithUser, res: Response, next: NextFunction) => {
   try {
     res.clearCookie("Authorization", {
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+      // secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       httpOnly: true,
       sameSite: "none",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
+      // secure: JSON.stringify(process.env.NODE_ENV) === JSON.stringify("developmentBackend") ? false : true,
       sameSite: "none",
     });
 
